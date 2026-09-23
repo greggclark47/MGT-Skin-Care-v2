@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-09-23 CI bootstrap checkpoint: The workflow now installs the pinned pnpm 9.0.0 package manager before `actions/setup-node` configures pnpm store caching. The focused CI contract suite passes all three cases. This is a repository-level fix only; a hosted GitHub Actions run has not yet been observed and production remains `NOT READY`.
+
 2026-09-23 clean-checkout verification checkpoint: The GitHub repository integration worktree exposed a release-gate dependency on a pre-existing root `dist` folder. `pnpm build:static` now builds the configured static preview from tracked sources, and the local verifier runs that build before scanning public artifacts. The source checkout's full local verification passed at `work/verification/2026-09-23T15-15-12-332Z/report.md`. This corrects a clean-checkout CI blocker; live services, hosted CI and production readiness remain unverified.
 
 2026-09-23 Phase 11 Support accessibility checkpoint: Commit `f075a43` adds focus management for new guidance results and errors, a focusable labeled Support request destination, and an explicit busy state. Web production build, 28-page proxy journey, and focused browser accessibility-tree checks of answer, handoff, and sign-in error focus passed. Shared branding, layout, routes, and ticket-submission boundary are unchanged. Full keyboard, screen-reader, mobile, contrast, and WCAG review remain open; release status is `NOT READY`.

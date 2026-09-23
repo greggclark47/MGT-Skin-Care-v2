@@ -18,3 +18,12 @@ test("continuous verification is read-only and runs the local release gate", () 
   assert.doesNotMatch(workflow, /^\s*run:\s*.*\b(?:deploy|publish)\b/im);
   assert.doesNotMatch(workflow, /^\s*secrets\s*:/m);
 });
+
+test("pnpm is installed before setup-node configures its store cache", () => {
+  const packageManager = workflow.indexOf("uses: pnpm/action-setup@v6");
+  const nodeCache = workflow.indexOf("uses: actions/setup-node@v4");
+  assert.ok(packageManager >= 0);
+  assert.ok(nodeCache > packageManager);
+  assert.match(workflow, /version:\s*9\.0\.0/);
+  assert.match(workflow, /cache:\s*pnpm/);
+});

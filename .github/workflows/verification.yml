@@ -20,12 +20,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Enable package manager
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.0.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - name: Enable package manager
-        run: corepack enable
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Validate deployment contracts
