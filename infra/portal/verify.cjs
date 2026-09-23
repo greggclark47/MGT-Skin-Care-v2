@@ -29,11 +29,12 @@ await run('HTTP, persistence, and release-contract regressions','',['--test','--
 const webBuilt=await run('web production build','apps/web',['node_modules/next/dist/bin/next','build']);
 if(webBuilt)await run('production web proxy journey','',['infra/portal/production-journey.cjs']);
 else results.push({name:'production web proxy journey',status:'UNTESTED',reason:'The required production build failed.'});
+const staticBuilt=await run('root static build','',['infra/portal/build-static.cjs']);
 const pattern=/gemini|sonnet|ollama|openai|deepseek|langchain|supabase|revenuecat|stripe|gpt-[0-9]|anthropic|claude/i;
 function files(dir){return fs.existsSync(dir)?fs.readdirSync(dir,{withFileTypes:true}).flatMap(item=>item.isDirectory()?files(path.join(dir,item.name)):[path.join(dir,item.name)]):[];}
 const artifactRoots=['apps/web/.next/static','dist'];
 const hits=artifactRoots.flatMap(dir=>files(path.join(root,dir))).filter(f=>/\.(js|html|css|json|map)$/i.test(f)&&pattern.test(fs.readFileSync(f,'utf8'))).map(f=>path.relative(root,f));
-const artifactReady=webBuilt&&artifactRoots.every(dir=>files(path.join(root,dir)).some(f=>/\.(js|html)$/i.test(f)));
+const artifactReady=webBuilt&&staticBuilt&&artifactRoots.every(dir=>files(path.join(root,dir)).some(f=>/\.(js|html)$/i.test(f)));
 const artifactStatus=artifactReady?(hits.length?'FAILED':'PASSED'):'UNTESTED';
 results.push({name:'generated public artifact vendor scan',status:artifactStatus,hits,reason:artifactReady?undefined:'Missing or unsuccessful build; zero matches cannot establish a pass.'});
 console.log(artifactStatus+' generated public artifact vendor scan: '+hits.length+' affected files');
