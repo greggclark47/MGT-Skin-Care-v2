@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d18">
+  <meta name="description" content="MGT Skin Care: personalized skincare, retail discovery, guided routines, and privacy-first account controls.">
+  <title>MGT Skin Care — Your skin. Your rhythm.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#home"><span class="brand-mark">M</span><span>MGT <em>skin care</em></span><small class="build-version">v2.10</small></a>
+      <nav class="main-nav" id="primaryNav" aria-label="Primary">
+        <a class="active" href="#home">Home</a>
+        <a href="#applications">Applications</a>
+        <a href="#plans">Plans</a>
+        <a href="#shop">Retail edit</a>
+        <a href="#operations">Operations</a>
+        <a href="#account">Account</a>
+      </nav>
+      <button class="menu-button" id="menuButton" type="button" aria-expanded="false" aria-controls="primaryNav">Menu</button>
+      <div class="header-actions">
+        <button class="icon-button" id="savedHeader" type="button">♡ <span>Saved</span> <b id="savedCount">0</b></button>
+        <button class="bag-button" type="button">My account <span>→</span></button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot"></span> SKINCARE, IN SYNC WITH YOU</p>
+          <h1>Your skin.<br><i>Your rhythm.</i></h1>
+          <p class="lead">Find your routine. Understand your ingredients.<br>Make space for a little more you.</p>
+          <div class="hero-actions"><a class="primary-button" href="#applications">Find my Skin Match <span>↗</span></a><a class="text-link" href="#applications">Explore the apps <span>↓</span></a></div>
+          <p class="demo-note">Interactive product demo · v1.6 verified snapshot · sample records only</p>
+        </div>
+        <figure class="editorial-card">
+          <img src="images/skincare-still-life.png" alt="Frosted skincare vessels on dark stone, lit in violet and amber">
+          <figcaption><span class="eyebrow">THE EVERYDAY RITUAL</span><strong>Less guesswork.<br>More intention.</strong><small>Concept imagery · products shown are illustrative</small></figcaption>
+        </figure>
+      </section>
+
+      <section class="portal-section application-section" id="applications">
+        <div class="section-heading"><div><p class="eyebrow">ONE CONNECTED PORTAL</p><h2>Care that moves<br><i>with your life.</i></h2></div><p>Each application uses the same consent-aware profile, so your context remains useful without turning your skincare into a black box.</p></div>
+        <div class="application-grid">
+          <article class="application-card app-skin"><span class="card-index">01</span><div class="app-symbol">✦</div><h3>Skin Match</h3><p>Explainable product matches based on goals, sensitivities, and preferences.</p><button class="text-link demo-action" data-demo="Skin Match" type="button">Start a match <span>↗</span></button></article>
+          <article class="application-card app-routine"><span class="card-index">02</span><div class="app-symbol">◌</div><h3>Routine Builder</h3><p>Build a routine by time, frequency, compatibility, and tolerance.</p><button class="text-link demo-action" data-demo="Routine Builder" type="button">Build a routine <span>↗</span></button></article>
+          <article class="application-card app-shop"><span class="card-index">03</span><div class="app-symbol">⌁</div><h3>Beauty Studio</h3><p>Compare a considered retail edit before leaving to buy.</p><a class="text-link" href="#shop">Browse the edit <span>↗</span></a></article>
+          <article class="application-card app-coach"><span class="card-index">04</span><div class="app-symbol">◎</div><h3>Care Coach</h3><p>Ask complex questions with clear guidance and thoughtful controls.</p><button class="text-link demo-action" data-demo="Care Coach" type="button">Open coach <span>↗</span></button></article>
+        </div>
+        <div class="intelligence-strip">
+          <div><span class="intelligence-label">EVERYDAY GUIDANCE</span><strong>Analysis engine</strong><small>Focused routine requests</small></div>
+          <div><span class="intelligence-label">DEEPER REVIEW</span><strong>Reasoning engine</strong><small>Structured multi-step guidance</small></div>
+          <div><span class="intelligence-label">PRECISION REVIEW</span><strong>Confidence controls</strong><small>Added depth when it matters</small></div>
+          <div><span class="intelligence-label">YOUR CONTEXT</span><strong>Platform data</strong><small>Consent-aware portal records</small></div>
+        </div>
+      </section>
+
+      <section class="approach-panel">
+        <div><p class="eyebrow">YOU STAY IN CONTROL</p><h2>A clear reason.<br><i>For every step.</i></h2><p>Explore the thinking behind your routine, review changes, and decide what works for you.</p><a class="secondary-button" href="#operations">How guidance works <span>↗</span></a></div>
+        <ol class="approach-steps"><li><span>01</span><div><h3>Tell us about your skin</h3><p>Your preferences and consent are the starting point.</p></div></li><li><span>02</span><div><h3>Understand your options</h3><p>See the reasoning behind each product match.</p></div></li><li><span>03</span><div><h3>Make it your own</h3><p>Review your routine as your needs change.</p></div></li></ol>
+      </section>
+
+      <section class="portal-section pricing-section" id="plans">
+        <div class="section-heading"><div><p class="eyebrow">MEMBERSHIP, MADE PRACTICAL</p><h2>More room to<br><i>go deeper.</i></h2></div><p>Every plan selects the right amount of review for your request—focused, clear, and designed for lasting value.</p></div>
+        <div class="billing-control" role="group" aria-label="Billing frequency"><button class="billing-toggle-button active" data-billing="monthly" type="button" aria-pressed="true">Monthly</button><button class="billing-toggle-button" data-billing="annual" type="button" aria-pressed="false">Annual <span>Save with annual</span></button></div>
+        <div class="pricing-grid" id="pricingGrid" aria-live="polite"></div>
+        <p class="pricing-note">All membership prices are shown in USD. Usage is measured in guidance requests. Overage packs keep your work moving without changing the care experience.</p>
+        <div class="comparison-wrap" tabindex="0">
+          <table class="comparison-table"><caption>Compare membership plans — USD</caption><thead><tr><th scope="col">Included</th><th scope="col">Essential</th><th scope="col">Guided</th><th scope="col">Studio</th></tr></thead><tbody><tr><th scope="row">Monthly guidance</th><td>250 requests</td><td>900 requests</td><td>2,500 requests</td></tr><tr><th scope="row">Care profiles</th><td>1 profile</td><td>3 profiles</td><td>10 profiles</td></tr><tr><th scope="row">Review depth</th><td>Focused guidance</td><td>Connected routine review</td><td>Deep multi-signal review</td></tr><tr><th scope="row">Response format</th><td>Concise action plan</td><td>Full explanation and options</td><td>Expanded plan and comparison</td></tr><tr><th scope="row">Turnaround</th><td>Standard</td><td>Priority</td><td>Fastest available</td></tr><tr><th scope="row">Active requests</th><td>1</td><td>2</td><td>4</td></tr><tr><th scope="row">When you need more</th><td>100-request packs</td><td>250-request packs</td><td>750-request packages</td></tr></tbody></table>
+        </div>
+        <div class="pricing-faq" aria-label="Plan questions"><details><summary>How does billing work?</summary><p>Choose monthly for flexibility or annual for two months of savings. Your plan renews on the same schedule until you change it.</p></details><details><summary>Can I cancel?</summary><p>Yes. Cancel any time from your account. Your plan remains available through the end of the paid period.</p></details><details><summary>What happens if I use more than my plan includes?</summary><p>We will show the available overage pack before it is added, so you can decide how to continue.</p></details><details><summary>When does an upgrade take effect?</summary><p>Upgrades take effect right away. Any eligible credit is applied before the new plan is charged.</p></details></div>
+      </section>
+
+      <section id="shop" class="shop-section">
+        <div class="shop-intro"><div><p class="eyebrow">THE RETAIL EDIT</p><h2>Good skin starts<br><i>with good choices.</i></h2></div><p>A calmer way to discover skincare. Compare across trusted retailers, keep your routine in view, and buy with confidence.</p></div>
+        <div class="shop-layout">
+          <aside class="filters" aria-label="Filter products">
+            <div class="filter-heading"><span>Refine the edit</span><button id="clearAll" class="text-button" type="button">Clear all</button></div>
+            <div id="activeFilters" class="active-filters"></div>
+            <div class="filter-group"><h3>Shop by concern</h3>
+              <label><input type="checkbox" name="concern" value="Dryness"> <span>Dryness</span><small>14</small></label>
+              <label><input type="checkbox" name="concern" value="Sensitivity"> <span>Sensitivity</span><small>9</small></label>
+              <label><input type="checkbox" name="concern" value="Texture"> <span>Texture &amp; pores</span><small>11</small></label>
+              <label><input type="checkbox" name="concern" value="Aging"> <span>Fine lines</span><small>8</small></label>
+            </div>
+            <div class="filter-group"><h3>Product type</h3>
+              <label><input type="checkbox" name="type" value="Cleanser"> <span>Cleanser</span><small>8</small></label>
+              <label><input type="checkbox" name="type" value="Serum"> <span>Serum</span><small>18</small></label>
+              <label><input type="checkbox" name="type" value="Moisturizer"> <span>Moisturizer</span><small>13</small></label>
+              <label><input type="checkbox" name="type" value="SPF"> <span>SPF</span><small>7</small></label>
+            </div>
+            <div class="filter-group"><h3>Price</h3><div class="price-row"><span>$18</span><span>$120</span></div><input class="range" type="range" min="18" max="120" value="120" id="priceRange"><p class="range-note">Up to <strong id="priceValue">$120</strong></p></div>
+          </aside>
+          <section class="catalog" aria-label="Product catalog">
+            <div class="retailer-row"><div class="retailer-tabs" role="tablist" aria-label="Retailer"><button class="retailer-tab active" data-retailer="All retailers" type="button">All retailers <span>32</span></button><button class="retailer-tab" data-retailer="Credo" type="button">Credo <span>12</span></button><button class="retailer-tab" data-retailer="Sephora" type="button">Sephora <span>15</span></button><button class="retailer-tab" data-retailer="Dermstore" type="button">Dermstore <span>9</span></button><button class="retailer-tab" data-retailer="Saved" type="button">Saved <span id="savedTabCount">0</span></button></div><select id="sortSelect" aria-label="Sort products"><option value="featured">Sort: Featured</option><option value="price-low">Price: Low to high</option><option value="price-high">Price: High to low</option></select></div>
+            <div class="catalog-meta"><span id="resultCount">8 products</span><span>Thoughtfully selected · USD retail pricing</span></div>
+            <div id="productGrid" class="product-grid"></div>
+            <div id="emptyState" class="empty-state" hidden><span class="empty-icon">✦</span><h2>No products match this edit.</h2><p>Try removing a filter or choosing another retailer.</p><button class="secondary-button" id="resetEmpty" type="button">Reset filters</button></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="portal-section operations-section" id="operations">
+        <div class="section-heading"><div><p class="eyebrow">RELEASE OPERATIONS</p><h2>Clear signals.<br><i>Quiet confidence.</i></h2></div><p>A concise operator view for privacy requests, subscription events, quality routing, and production readiness. All identifiers are sample data.</p></div>
+        <div class="metric-grid"><article><span>Primary analysis</span><strong>Platform engine</strong><small>Quality controls active</small></article><article><span>Regression suite</span><strong>v1.6 passed</strong><small>Local release evidence recorded</small></article><article><span>Guest access</span><strong>30 days</strong><small>Owner-approved sharing</small></article><article><span>Release gate</span><strong>CI ready</strong><small>Live environment validation pending</small></article></div>
+        <div class="operations-console">
+          <div class="console-tabs" role="tablist" aria-label="Operations views"><button class="console-tab active" data-panel="privacy" type="button">Privacy operations</button><button class="console-tab" data-panel="webhooks" type="button">Webhook reconciliation</button><button class="console-tab" data-panel="routing" type="button">Quality routing</button><button class="console-tab" data-panel="infrastructure" type="button">Infrastructure</button><button class="console-tab" data-panel="release" type="button">Release evidence</button></div>
+          <div class="console-panel active" id="privacyPanel" data-console-panel="privacy"><div class="panel-title"><div><h3>Deletion request queue</h3><p>Identifiers are minimized in the operator view.</p></div><span class="status-pill warning">1 action needed</span></div><div class="table-wrap"><table><thead><tr><th>Request</th><th>Status</th><th>Scheduled</th><th>Blocker</th></tr></thead><tbody><tr><td><code>del_•••7F2A</code></td><td><span class="row-status scheduled">Scheduled</span></td><td>Sep 25, 2026</td><td>—</td></tr><tr><td><code>del_•••19BC</code></td><td><span class="row-status blocked">Blocked</span></td><td>Sep 24, 2026</td><td>Active subscription</td></tr></tbody></table></div></div>
+          <div class="console-panel" id="webhooksPanel" data-console-panel="webhooks" hidden><div class="panel-title"><div><h3>Subscription event receipts</h3><p>Duplicates are acknowledged safely without replaying changes.</p></div><span class="status-pill success">Healthy</span></div><div class="table-wrap"><table><thead><tr><th>Event</th><th>Delivery</th><th>Result</th><th>Age</th></tr></thead><tbody><tr><td><code>evt_•••A91</code></td><td>Invoice paid</td><td><span class="row-status complete">Processed</span></td><td>2m</td></tr><tr><td><code>evt_•••B08</code></td><td>Subscription updated</td><td><span class="row-status duplicate">Duplicate ignored</span></td><td>11m</td></tr></tbody></table></div></div>
+          <div class="console-panel" id="routingPanel" data-console-panel="routing" hidden><div class="panel-title"><div><h3>Quality routing</h3><p>Review depth follows complexity, risk, and response quality.</p></div><span class="status-pill success">Policy active</span></div><div class="routing-grid"><article><span>Frequent + routine</span><strong>Platform engine</strong><p>Focused guidance, summaries, retrieval, and portal assistance.</p></article><article><span>Connected review</span><strong>Reasoning engine</strong><p>Structured analysis for longer, multi-step requests.</p></article><article><span>Complex + high impact</span><strong>Precision review</strong><p>Added review depth when complexity or release risk justifies it.</p></article></div></div>
+          <div class="console-panel" id="infrastructurePanel" data-console-panel="infrastructure" hidden><div class="panel-title"><div><h3>Production service chain</h3><p>Preflight blocks deployment when required production values are missing or unsafe.</p></div><span class="status-pill warning">External validation pending</span></div><div class="service-chain"><article><span class="service-state ready">Configured</span><strong>Secure edge</strong><p>Secure routing for the portal, service health, and signed event traffic.</p></article><article><span class="service-state ready">Configured</span><strong>Portal services</strong><p>Health-gated delivery with same-origin requests.</p></article><article><span class="service-state pending">Needs credentials</span><strong>Data + identity</strong><p>Production connection, updates, and identity lifecycle validation.</p></article><article><span class="service-state pending">Needs restore drill</span><strong>Worker + backup</strong><p>Fresh worker heartbeat and verified off-host backup required for readiness.</p></article></div></div>
+          <div class="console-panel" id="releasePanel" data-console-panel="release" hidden><div class="panel-title"><div><h3>Release evidence</h3><p>Every build records what was verified locally and what still needs a live environment.</p></div><span class="status-pill success">v1.6 passed</span></div><div class="service-chain"><article><span class="service-state ready">Passed</span><strong>Portal release gate</strong><p>Builds, portal journeys, and regression contracts completed successfully.</p></article><article><span class="service-state ready">Clear</span><strong>Public surface</strong><p>Generated portal artifacts were checked for internal service references.</p></article><article><span class="service-state ready">Configured</span><strong>Continuous checks</strong><p>Future reviews and main-branch updates run the locked local verification gate.</p></article><article><span class="service-state pending">Still needed</span><strong>Live environment</strong><p>Container startup, data reconciliation, backup restore, and production service checks.</p></article></div><button class="secondary-button demo-action" data-demo="Release evidence" type="button">View sample evidence <span>↗</span></button></div>
+        </div>
+      </section>
+
+      <section class="portal-section account-section" id="account">
+        <div class="account-copy"><p class="eyebrow">ACCOUNT &amp; PRIVACY</p><h2>Your profile should feel<br><i>like yours.</i></h2><p>Download your information, understand retention, or schedule account deletion from one place. Production actions require a verified session and clear confirmation.</p><div class="account-note"><b>Demo only</b><span>These controls update the preview and never change a real account.</span></div></div>
+        <div class="account-stack">
+          <div class="account-card"><div class="profile-row"><div class="avatar">AM</div><div><strong>Alex Morgan</strong><span>Demo member · Routine active</span></div><span class="verified">Verified</span></div><div class="account-actions"><button class="account-action demo-action" data-demo="Data export" type="button"><span>Download my data<small>Portable JSON export</small></span><b>↓</b></button><button class="account-action" id="deleteAccountButton" type="button"><span id="deleteActionCopy">Schedule account deletion<small id="deleteActionDetail">30-day recovery window</small></span><b id="deleteActionIcon">→</b></button></div><div class="deletion-state" id="deletionState" hidden><i></i><div><strong>Deletion scheduled</strong><p>Your demo recovery window ends October 18, 2026.</p></div></div></div>
+          <div class="guest-card"><div class="guest-card-head"><span>Guest access</span><strong>Invite one person for 30 days</strong></div><p>Choose basic access or owner-approved shared access. Guest profiles stay private, usage stays within the owner allowance, and access can be revoked any time.</p><div class="guest-mode-grid"><button class="guest-mode active" aria-pressed="true" data-guest-mode="basic" type="button"><b>Basic guest</b><small>Limited care tools for trial access</small></button><button class="guest-mode" aria-pressed="false" data-guest-mode="match" type="button"><b>Shared access</b><small>Same plan ceiling as the owner</small></button></div><button class="secondary-button guest-action" id="guestInviteButton" type="button">Create sample invite <span>→</span></button><div class="guest-invite" id="guestInviteState" hidden><span id="guestInviteMode">Basic guest</span><strong>Invite active until Oct 19, 2026</strong><small>Sample link prepared · no real invitation sent</small></div></div>
+        </div>
+      </section>
+    </main>
+    <footer><a class="brand" href="#home"><span class="brand-mark">M</span><span>MGT <em>skin care</em></span></a><p>Thoughtful skincare. Connected.</p><div><span>Trust</span><span>Privacy</span><span>Terms</span></div></footer>
+  </div>
+  <div id="compareTray" class="compare-tray" hidden><div><strong><span id="compareCount">0</span> selected for comparison</strong><span class="tray-note">Keep your choices as you browse retailers.</span></div><div class="tray-actions"><button class="text-button" id="clearCompare" type="button">Clear</button><button class="primary-button" id="compareButton" type="button">Compare now <span>→</span></button></div></div>
+  <dialog class="demo-dialog" id="demoDialog" aria-labelledby="demoDialogTitle"><div class="dialog-head"><div><span id="demoDialogKicker">APPLICATION DEMO</span><h2 id="demoDialogTitle">Interactive preview</h2></div><button id="closeDemoDialog" type="button" aria-label="Close preview">×</button></div><div class="dialog-progress"><span></span><small id="demoDialogStep">Guided sample flow</small></div><div id="demoDialogBody" class="dialog-body"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

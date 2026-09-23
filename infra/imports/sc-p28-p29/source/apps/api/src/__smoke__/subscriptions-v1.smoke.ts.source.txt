@@ -1,0 +1,356 @@
+// __smoke__/subscriptions-v1.smoke.ts — SC-P28
+//
+// Runs the real Express app over fake repositories. No database, no Stripe, no
+// network — same posture as the existing fetch-mocked suites. What it asserts is
+// INVARIANTS (ordering, refusals, envelope shape, who may write status), not
+// response snapshots, so it keeps holding when the schema question resolves.
+//
+// Run: npx tsx apps/api/src/__smoke__/subscriptions-v1.smoke.ts
+// Status at time of upload: 45/45 checks passing, tsc --strict clean.
+
+import express from 'express';
+import type { AddressInfo } from 'node:net';
+import { createV1Router } from '../routes/v1';
+import {
+  subscriptionsRouter,
+  type SubscriptionBillingPort,
+  type SubscriptionCheckout,
+} from '../modules/subscriptions/router';
+import type {
+  SubscriptionDetail,
+  SubscriptionRepository,
+} from '../persistence/subscription-repository';
+import { resolveEntitlement } from '../../../../packages/domain/src/engines/entitlement-resolver';
+
+// ── Assertions ──────────────────────────────────────────────────────────────────
+
+let passed = 0;
+const failures: string[] = [];
+
+function check(name: string, cond: boolean, detail?: unknown): void {
+  if (cond) {
+    passed += 1;
+  } else {
+    failures.push(`${name}${detail === undefined ? '' : ` — got ${JSON.stringify(detail)}`}`);
+  }
+}
+
+// ── Fakes ───────────────────────────────────────────────────────────────────────
+
+const DAY = 24 * 60 * 60 * 1000;
+const iso = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOString();
+
+function makeSub(over: Partial<SubscriptionDetail>): SubscriptionDetail {
+  return {
+    id: 'sub_1',
+    user_id: 'user_a',
+    provider: 'stripe',
+    status: 'active',
+    current_period_end: iso(20 * DAY),
+    price_id: 'price_premium_monthly',
+    cancel_at_period_end: false,
+    provider_subscription_id: 'sub_stripe_1',
+    created_at: iso(-60 * DAY),
+    ...over,
+  };
+}
+
+class FakeSubscriptionRepository implements SubscriptionRepository {
+  writes: Array<{ userId: string; id: string; cancel: boolean }> = [];
+  constructor(private rows: SubscriptionDetail[]) {}
+
+  async listForUser(userId: string): Promise<SubscriptionDetail[]> {
+    return this.rows.filter((r) => r.user_id === userId);
+  }
+  async getById(userId: string, id: string): Promise<SubscriptionDetail | null> {
+    return this.rows.find((r) => r.user_id === userId && r.id === id) ?? null;
+  }
+  async setCancelAtPeriodEnd(userId: string, id: string, cancel: boolean): Promise<void> {
+    this.writes.push({ userId, id, cancel });
+  }
+  async resolveFor(userId: string, now: Date = new Date()) {
+    const rows = await this.listForUser(userId);
+    return resolveEntitlement(
+      rows.map((r) => ({
+        provider: r.provider,
+        status: r.status,
+        current_period_end: r.current_period_end,
+      })),
+      now,
+    );
+  }
+}
+
+class RecordingBillingPort implements SubscriptionBillingPort {
+  calls: string[] = [];
+  failCancel = false;
+
+  async createCheckout(): Promise<SubscriptionCheckout> {
+    this.calls.push('createCheckout');
+    return { id: 'cs_test_1', url: 'https://stub.invalid/c/1', client_secret: 'cs_secret_1' };
+  }
+  async changePrice(): Promise<void> {
+    this.calls.push('changePrice');
+  }
+  async cancelAtPeriodEnd(): Promise<void> {
+    this.calls.push('cancelAtPeriodEnd');
+    if (this.failCancel) throw new Error('provider refused');
+  }
+}
+
+// ── Harness ─────────────────────────────────────────────────────────────────────
+
+function buildApp(repo: SubscriptionRepository, billing: SubscriptionBillingPort) {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    '/api/v1',
+    createV1Router({
+      checkout: express.Router(),
+      // Explicit resolver: the production default fails closed, which is asserted
+      // separately below rather than worked around here.
+      subscriptions: subscriptionsRouter(repo, billing, (req) => req.header('x-user-id') ?? null),
+    }),
+  );
+  return app;
+}
+
+async function withServer(
+  app: express.Express,
+  fn: (base: string) => Promise<void>,
+): Promise<void> {
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once('listening', () => resolve()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    await fn(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+}
+
+const asUser = (id: string) => ({ 'x-user-id': id, 'content-type': 'application/json' });
+
+// ── Suite ───────────────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  // ---- 1. Fail-closed default resolver -----------------------------------------
+  {
+    delete process.env.ALLOW_HEADER_USER_ID;
+    const repo = new FakeSubscriptionRepository([makeSub({})]);
+    const app = express();
+    app.use(express.json());
+    // Default resolver (headerUserResolver), no opt-in env flag set.
+    app.use('/api/v1', createV1Router({
+      checkout: express.Router(),
+      subscriptions: subscriptionsRouter(repo, new RecordingBillingPort()),
+    }));
+    await withServer(app, async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions`, { headers: asUser('user_a') });
+      const body = await r.json();
+      check('default resolver refuses a header-asserted identity', r.status === 401, r.status);
+      check('401 uses the v1 envelope', typeof body.error === 'object' && body.error.code === 'unauthenticated', body);
+    });
+  }
+
+  // ---- 2. List + entitlement, trialing and grace -------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([
+      makeSub({ id: 'sub_trial', status: 'trialing', current_period_end: iso(5 * DAY) }),
+    ]);
+    await withServer(buildApp(repo, new RecordingBillingPort()), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions`, { headers: asUser('user_a') });
+      const body = await r.json();
+      check('GET / returns 200', r.status === 200, r.status);
+      check('a trialing subscription is premium', body.entitlement?.premium === true, body.entitlement);
+      check('entitlement names its source', body.entitlement?.source === 'stripe', body.entitlement);
+      check('list is serialized', Array.isArray(body.subscriptions) && body.subscriptions.length === 1, body.subscriptions);
+      check(
+        'provider_subscription_id is never exposed',
+        body.subscriptions.every((s: Record<string, unknown>) => !('provider_subscription_id' in s)),
+        body.subscriptions,
+      );
+    });
+  }
+
+  // ---- 3. past_due inside the 3-day grace window stays premium ------------------
+  {
+    const repo = new FakeSubscriptionRepository([
+      makeSub({ status: 'past_due', current_period_end: iso(-2 * DAY) }),
+    ]);
+    await withServer(buildApp(repo, new RecordingBillingPort()), async (base) => {
+      const body = await (await fetch(`${base}/api/v1/subscriptions`, { headers: asUser('user_a') })).json();
+      check('past_due within grace is still premium', body.entitlement?.premium === true, body.entitlement);
+    });
+  }
+  {
+    const repo = new FakeSubscriptionRepository([
+      makeSub({ status: 'past_due', current_period_end: iso(-5 * DAY) }),
+    ]);
+    await withServer(buildApp(repo, new RecordingBillingPort()), async (base) => {
+      const body = await (await fetch(`${base}/api/v1/subscriptions`, { headers: asUser('user_a') })).json();
+      check('past_due beyond grace is not premium', body.entitlement?.premium === false, body.entitlement);
+    });
+  }
+
+  // ---- 4. Cross-user access ----------------------------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([makeSub({ id: 'sub_a', user_id: 'user_a' })]);
+    await withServer(buildApp(repo, new RecordingBillingPort()), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions/sub_a`, { headers: asUser('user_b') });
+      const body = await r.json();
+      check("another user's subscription is 404, not 403", r.status === 404, r.status);
+      check('404 leaks nothing about the row', !JSON.stringify(body).includes('user_a'), body);
+    });
+  }
+
+  // ---- 5. POST never marks anything active -------------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([]);
+    const billing = new RecordingBillingPort();
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions`, {
+        method: 'POST',
+        headers: asUser('user_a'),
+        body: JSON.stringify({ price_id: 'price_premium_monthly' }),
+      });
+      const body = await r.json();
+      check('POST returns 202, not 201', r.status === 202, r.status);
+      check('POST reports pending_payment', body.status === 'pending_payment', body);
+      check('POST hands back a checkout handle', typeof body.checkout?.id === 'string', body);
+      check('POST never returns an active subscription', !JSON.stringify(body).includes('"active"'), body);
+      check('POST wrote nothing to the repository', repo.writes.length === 0, repo.writes);
+    });
+  }
+
+  // ---- 6. Validation -----------------------------------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([]);
+    const billing = new RecordingBillingPort();
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions`, {
+        method: 'POST',
+        headers: asUser('user_a'),
+        body: JSON.stringify({}),
+      });
+      const body = await r.json();
+      check('missing price_id is 400', r.status === 400, r.status);
+      check('400 code is invalid_request', body.error?.code === 'invalid_request', body);
+      check('400 names the offending field', String(body.error?.message).includes('price_id'), body);
+      check('a rejected body never reaches the billing provider', billing.calls.length === 0, billing.calls);
+    });
+  }
+
+  // ---- 7. Platform-managed refusals --------------------------------------------
+  for (const method of ['PUT', 'DELETE'] as const) {
+    const repo = new FakeSubscriptionRepository([
+      makeSub({ id: 'sub_rc', provider: 'revenuecat', provider_subscription_id: 'rc_1' }),
+    ]);
+    const billing = new RecordingBillingPort();
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions/sub_rc`, {
+        method,
+        headers: asUser('user_a'),
+        body: JSON.stringify({ price_id: 'price_x', cancel_at_period_end: true }),
+      });
+      const body = await r.json();
+      check(`${method} on a platform-managed subscription is 409`, r.status === 409, r.status);
+      check(`${method} refusal code is platform_managed`, body.error?.code === 'platform_managed', body);
+      check(`${method} refusal gives the user somewhere to go`, typeof body.error?.manage_urls?.ios === 'string', body);
+      check(`${method} refusal calls no billing provider`, billing.calls.length === 0, billing.calls);
+      check(`${method} refusal writes nothing`, repo.writes.length === 0, repo.writes);
+    });
+  }
+
+  // ---- 8. Cancel ordering: provider first, local flag second --------------------
+  {
+    const repo = new FakeSubscriptionRepository([makeSub({ id: 'sub_s' })]);
+    const billing = new RecordingBillingPort();
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions/sub_s`, {
+        method: 'DELETE',
+        headers: asUser('user_a'),
+        body: JSON.stringify({ cancel_at_period_end: true }),
+      });
+      const body = await r.json();
+      check('cancel returns 200', r.status === 200, r.status);
+      check('cancel called the provider', billing.calls.includes('cancelAtPeriodEnd'), billing.calls);
+      check('cancel then wrote the local flag', repo.writes.length === 1 && repo.writes[0].cancel === true, repo.writes);
+      check('cancel tells the user when access actually ends', typeof body.access_until === 'string', body);
+      check('cancel does not revoke access immediately', new Date(body.access_until).getTime() > Date.now(), body);
+    });
+  }
+
+  // ---- 9. Provider failure must not leave a local "cancelled" flag -------------
+  {
+    const repo = new FakeSubscriptionRepository([makeSub({ id: 'sub_s' })]);
+    const billing = new RecordingBillingPort();
+    billing.failCancel = true;
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions/sub_s`, {
+        method: 'DELETE',
+        headers: asUser('user_a'),
+        body: JSON.stringify({ cancel_at_period_end: true }),
+      });
+      const body = await r.json();
+      check('a failing provider cancel is a 500, not a silent success', r.status === 500, r.status);
+      check('500 uses the v1 envelope', body.error?.code === 'internal_error', body);
+      check('500 does not leak the driver message', !JSON.stringify(body).includes('provider refused'), body);
+      check(
+        'a failed provider cancel writes no local flag',
+        repo.writes.length === 0,
+        repo.writes,
+      );
+    });
+  }
+
+  // ---- 10. Not-provisioned guard ------------------------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([
+      makeSub({ id: 'sub_new', status: 'incomplete', provider_subscription_id: null }),
+    ]);
+    const billing = new RecordingBillingPort();
+    await withServer(buildApp(repo, billing), async (base) => {
+      const r = await fetch(`${base}/api/v1/subscriptions/sub_new`, {
+        method: 'DELETE',
+        headers: asUser('user_a'),
+        body: JSON.stringify({}),
+      });
+      const body = await r.json();
+      check('cancelling an unprovisioned subscription is 409', r.status === 409, r.status);
+      check('unprovisioned code is not_provisioned', body.error?.code === 'not_provisioned', body);
+      check('unprovisioned cancel calls no provider', billing.calls.length === 0, billing.calls);
+    });
+  }
+
+  // ---- 11. v1 envelope + scoped 404 ---------------------------------------------
+  {
+    const repo = new FakeSubscriptionRepository([]);
+    await withServer(buildApp(repo, new RecordingBillingPort()), async (base) => {
+      const r = await fetch(`${base}/api/v1/nothing-here`, { headers: asUser('user_a') });
+      const body = await r.json();
+      check('unknown v1 path is 404', r.status === 404, r.status);
+      check('unknown v1 path answers in the v1 envelope', typeof body.error === 'object', body);
+      check(
+        'v1 envelope is an object, unlike the legacy string shape',
+        typeof body.error !== 'string',
+        body,
+      );
+    });
+  }
+
+  // ── Report ────────────────────────────────────────────────────────────────────
+  const total = passed + failures.length;
+  console.log(`\nsubscriptions-v1 smoke: ${passed}/${total} checks passed`);
+  if (failures.length > 0) {
+    console.error('\nFAILED:');
+    for (const f of failures) console.error(`  ✗ ${f}`);
+    process.exit(1);
+  }
+  console.log('All checks passed.');
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

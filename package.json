@@ -1,0 +1,25 @@
+{
+  "name": "mgt-skincare-v2",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "migrate": "node infra/db/migrate.js",
+    "infra:preflight": "node --env-file-if-exists=infra/portal/.env infra/portal/preflight.mjs",
+    "reconcile:migrations": "node infra/db/migration-lineage.mjs",
+    "test:compose-contract": "node --test infra/portal/compose-contract.test.mjs",
+    "test:ci-contract": "node --test infra/portal/ci-contract.test.mjs",
+    "test:infra": "node --test infra/portal/preflight.test.mjs",
+    "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
+    "test:golden": "pnpm --filter @mgt/domain build && node --test packages/shared/test/golden-cases.cjs",
+    "test:analytics": "pnpm --filter @mgt/analytics-sdk test",
+    "test:mobile-contract": "pnpm --filter @mgt/mobile test:contract",
+    "release:checkpoint": "node infra/portal/local-checkpoint.cjs",
+    "test:verification": "node infra/portal/verify.cjs"
+  }
+}

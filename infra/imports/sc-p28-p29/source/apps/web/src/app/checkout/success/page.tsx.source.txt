@@ -1,0 +1,110 @@
+'use client';
+// apps/web/src/app/checkout/success/page.tsx — SC-P29
+//
+// Closes the second half of punch-list 1.1. This route never existed.
+//
+// WHAT IT IS NOT: a second copy of /shop/confirm. That page already polls order
+// status and handles every terminal state, and duplicating it would give the purchase
+// path two implementations to drift apart. When a product order is pending, this page
+// hands straight over to it.
+//
+// WHAT IT IS: the landing for a SUBSCRIPTION checkout. Stripe's hosted Checkout needs
+// a success_url, and a subscription resolves into an entitlement, not an `orders` row
+// — there is no order id to poll. So this polls GET /api/v1/subscriptions until
+// entitlement.premium flips, which happens when the Stripe webhook writes the
+// subscription row.
+//
+// SERVER-AUTHORITATIVE, same rule as /shop/confirm: arriving here means Stripe
+// redirected, nothing more. This page never says "you're subscribed" on the strength
+// of the redirect. Every headline it can render is in pollCopy(), and only the
+// 'premium' branch has claimsSuccess: true.
+
+import { useEffect, useRef, useState } from 'react';
+import { space } from '@mgt/shared';
+import { SubscriptionApi } from '@mgt/shared';
+import { getOrCreateAnonymousId } from '../../../lib/identity';
+import {
+  ENTITLEMENT_POLL_INTERVAL_MS,
+  ENTITLEMENT_POLL_TIMEOUT_MS,
+  PENDING_SUBSCRIPTION_KEY,
+  classifyLanding,
+  nextPollState,
+  pollCopy,
+  type PollState,
+} from '../../../lib/subscription-state';
+
+const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+export default function CheckoutSuccessPage() {
+  const [state, setState] = useState<PollState>('polling');
+  const startedAt = useRef(Date.now());
+
+  useEffect(() => {
+    const landing = classifyLanding(sessionStorage);
+
+    if (landing.kind === 'order') {
+      // Product purchase — /shop/confirm owns this. replace(), not href, so Back does
+      // not bounce the user between two confirmation screens.
+      window.location.replace(landing.redirectTo);
+      return;
+    }
+    if (landing.kind === 'unknown') {
+      setState('unknown_landing');
+      return;
+    }
+
+    const api = new SubscriptionApi(baseUrl).withUser(getOrCreateAnonymousId());
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    async function poll() {
+      try {
+        const res = await api.list();
+        if (cancelled) return;
+        const next = nextPollState({
+          premium: res.entitlement.premium,
+          elapsedMs: Date.now() - startedAt.current,
+        });
+        setState(next);
+        if (next === 'premium') {
+          sessionStorage.removeItem(PENDING_SUBSCRIPTION_KEY);
+          return;
+        }
+        if (next === 'timeout') return;
+        timer = setTimeout(poll, ENTITLEMENT_POLL_INTERVAL_MS);
+      } catch {
+        if (cancelled) return;
+        // A failed request is not a failed payment. Keep polling inside the budget;
+        // the webhook is what decides, not our ability to reach the API right now.
+        if (Date.now() - startedAt.current > ENTITLEMENT_POLL_TIMEOUT_MS) {
+          setState('timeout');
+          return;
+        }
+        timer = setTimeout(poll, ENTITLEMENT_POLL_INTERVAL_MS);
+      }
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const copy = pollCopy(state);
+
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: space.lg, textAlign: 'center' }}>
+      <h1 style={{ fontSize: 22 }}>{copy.headline}</h1>
+      <p style={{ color: '#374151' }}>{copy.detail}</p>
+      {state === 'polling' ? <p aria-live="polite" style={{ color: '#6B7280' }}>Checking…</p> : null}
+      {state !== 'polling' ? (
+        <p>
+          <a href="/subscription" style={{ color: '#7C3AED' }}>
+            Go to your subscription
+          </a>
+        </p>
+      ) : null}
+    </div>
+  );
+}

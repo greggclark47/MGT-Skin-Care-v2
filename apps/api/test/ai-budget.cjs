@@ -1,0 +1,44 @@
+const assert=require('node:assert/strict');
+const {LocalStore}=require('../dist/portal/store.js');
+const {StoreBudgetStore}=require('../dist/portal/ai.js');
+
+(async()=>{
+ const store=new LocalStore(':memory:'),first=new StoreBudgetStore(store),second=new StoreBudgetStore(store);
+ assert.equal(await first.spentToday('user_1','tier1_copy'),0);
+ await first.record('user_1','tier1_copy',1.25);
+ await second.record('user_1','tier1_copy',2.75);
+ assert.equal(await first.spentToday('user_1','tier1_copy'),4);
+ assert.equal(await second.spentToday('user_1','tier3_premium'),0);
+ const holds=await Promise.all(Array.from({length:40},(_,i)=>(i%2?first:second).reserve('parallel','tier1_copy',3,25)));
+ assert.equal(holds.filter(Boolean).length,8);
+ assert.equal(await first.spentToday('parallel','tier1_copy'),24);
+ await Promise.all([first.settle(holds.find(Boolean),1),second.settle(holds.find(Boolean),1)]);
+ assert.equal(await first.spentToday('parallel','tier1_copy'),22,'settlement is idempotent');
+ await assert.rejects(first.reserve('parallel','tier1_copy',NaN,25),/invalid_budget_amount/);
+ await assert.rejects(first.settle(holds.find(Boolean),-1),/invalid_budget_amount/);
+ const failingStore={kind:store.kind,close:()=>store.close(),tx:fn=>store.tx(r=>fn({...r,put:async(scope,id,value)=>{
+  if(scope==='ai_budget_reservations')throw Error('reservation write failed');
+  return r.put(scope,id,value);
+ }}))};
+ await assert.rejects(new StoreBudgetStore(failingStore).reserve('rollback','tier1_copy',5,25),/reservation write failed/);
+ assert.equal(await first.spentToday('rollback','tier1_copy'),0,'failed reservation transaction rolls back spend');
+ let now=Date.parse('2026-09-12T23:59:59Z');
+ const dated=new StoreBudgetStore(store,()=>now);
+ const midnight=await dated.reserve('midnight','tier1_copy',5,25);
+ now+=2000;
+ await dated.settle(midnight,2);
+ assert.equal(await dated.spentToday('midnight','tier1_copy'),0);
+ now-=2000;
+ assert.equal(await dated.spentToday('midnight','tier1_copy'),2);
+ const reconcileId=await dated.reserve('reconcile','tier1_copy',5,25);
+ await assert.rejects(dated.reconcile(reconcileId,0,'operator','invoice-check-001'),error=>error.code==='reservation_active');
+ now+=600001;
+ assert.equal((await dated.pending()).some(row=>row.id===reconcileId),true);
+ const reconciled=await dated.reconcile(reconcileId,2,'operator','invoice-check-001');
+ assert.equal(reconciled.actual_cents,2);
+ await assert.rejects(dated.reconcile(reconcileId,0,'operator','invoice-check-002'),error=>error.code==='reservation_closed');
+ now-=600001;
+ assert.equal(await dated.spentToday('reconcile','tier1_copy'),2);
+ assert.equal((await store.tx(r=>r.get('ai_budget_reconciliations',reconcileId))).provider_reference,'invoice-check-001');
+ await store.close();console.log('AI budget persistence, concurrent reservations, idempotence and midnight settlement passed');
+})().catch(error=>{console.error(error);process.exitCode=1;});

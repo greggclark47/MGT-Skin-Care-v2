@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "MGT Skin Care",
+    "slug": "mgt-skin-care",
+    "scheme": "mgtskincare",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.mgt.skincare" },
+    "android": { "package": "com.mgt.skincare" }
+  }
+}
