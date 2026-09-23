@@ -1,5 +1,9 @@
 # AI release controls checkpoint
 
+2026-09-23 Support handoff draft checkpoint: A customer-care handoff can now copy the submitted question into the existing Portal Support request form only after the user selects an explicit action. The subject receives focus for review; no ticket is created until Save request. A focused browser flow confirmed zero requests before Save and one saved local request afterward, including protection against copying later edits to the unsent question. The full local gate passed at `work/verification/2026-09-23T15-39-30-863Z/report.md`; web typecheck and production build also passed after the final UI edit. External support delivery and production readiness remain `NOT READY`.
+
+2026-09-23 target repository CI checkpoint: GitHub Actions run [35881676411](https://github.com/greggclark47/MGT-Skin-Care-v2/actions/runs/35881676411) passed for the initial portal import. The Support handoff edit was made afterward and needs its own PR-head CI run.
+
 2026-09-23 CI bootstrap checkpoint: The workflow now installs the pinned pnpm 9.0.0 package manager before `actions/setup-node` configures pnpm store caching. The focused CI contract suite passes all three cases. This is a repository-level fix only; a hosted GitHub Actions run has not yet been observed and production remains `NOT READY`.
 
 2026-09-23 clean-checkout verification checkpoint: The GitHub repository integration worktree exposed a release-gate dependency on a pre-existing root `dist` folder. `pnpm build:static` now builds the configured static preview from tracked sources, and the local verifier runs that build before scanning public artifacts. The source checkout's full local verification passed at `work/verification/2026-09-23T15-15-12-332Z/report.md`. This corrects a clean-checkout CI blocker; live services, hosted CI and production readiness remain unverified.

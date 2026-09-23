@@ -14,8 +14,8 @@ export default function Support(){
  const state=useHub('/support'),session=useHub('/session');
  const [subject,setSubject]=useState(''),[message,setMessage]=useState(''),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [role,setRole]=useState<GuideRole>('customer_care'),[question,setQuestion]=useState(''),[consent,setConsent]=useState(false);
- const [guide,setGuide]=useState<GuideResult|null>(null),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
- const guideResultRef=useRef<HTMLDivElement>(null),guideErrorRef=useRef<HTMLParagraphElement>(null),requestFormRef=useRef<HTMLFormElement>(null);
+ const [guide,setGuide]=useState<GuideResult|null>(null),[guideQuestion,setGuideQuestion]=useState(''),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
+ const guideResultRef=useRef<HTMLDivElement>(null),guideErrorRef=useRef<HTMLParagraphElement>(null),requestFormRef=useRef<HTMLFormElement>(null),requestSubjectRef=useRef<HTMLInputElement>(null);
  const reviewed=role==='routine_guidance'||role==='product_referral';
  const reviewedReady=!!session.data?.account&&session.data?.ai_configured===true;
 
@@ -23,15 +23,16 @@ export default function Support(){
 
  async function askGuide(e:React.FormEvent){
   e.preventDefault();if(guideBusy||!question.trim())return;
-  setGuideBusy(true);setGuideError('');setGuide(null);
-  try{setGuide(await hub('/assistant',{role,message:question.trim(),ai_consent:reviewed&&consent}));}
+  const submittedQuestion=question.trim();
+  setGuideBusy(true);setGuideError('');setGuide(null);setGuideQuestion('');
+  try{const result=await hub('/assistant',{role,message:submittedQuestion,ai_consent:reviewed&&consent});setGuideQuestion(submittedQuestion);setGuide(result);}
   catch(e){setGuideError((e as Error).message);}
   finally{setGuideBusy(false);}
  }
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy||!subject.trim()||!message.trim())return;
   setBusy(true);setError('');setFeedback('');
-  try{await hub('/support',{subject:subject.trim(),message:message.trim()});setSubject('');setMessage('');setFeedback('Saved to your portal requests.');}
+  try{await hub('/support',{subject:subject.trim(),message:message.trim()});setSubject('');setMessage('');setGuideQuestion('');setFeedback('Saved to your portal requests.');}
   catch(e){setError((e as Error).message);}
   finally{setBusy(false);}
  }
@@ -46,7 +47,7 @@ export default function Support(){
    <p>Get directions for using the portal. A suggestion here does not submit a support request or confirm a retailer payment.</p>
    <form className="stack" onSubmit={askGuide} aria-busy={guideBusy}>
     <label className="field">Help topic
-     <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+     <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideQuestion('');setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
     </label>
     <label className="field">Your question
      <textarea required maxLength={1800} value={question} disabled={guideBusy} aria-describedby="guide-count" placeholder="What would you like help with?" onChange={e=>setQuestion(e.target.value)}/>
@@ -59,13 +60,13 @@ export default function Support(){
     {guideError&&<p ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
-   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path}>{guide.next_step.label} →</Link>)}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
+   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
 
   {feedback&&<p className="notice success" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
   <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" className="panel stack support-form" onSubmit={submit}>
    <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
-   <label className="field">Subject<input required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
+   <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
    <label className="field">Details<textarea required maxLength={4000} disabled={busy} value={message} placeholder="Describe what happened and which portal page you were using." aria-describedby="support-count" onChange={e=>setMessage(e.target.value)}/></label>
    <span className="muted" id="support-count">{message.length} / 4,000 characters</span>
    <button className="button primary" disabled={busy||!subject.trim()||!message.trim()}>{busy?'Saving…':'Save request'}</button>

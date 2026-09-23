@@ -65,6 +65,8 @@ Use these status labels in implementation and reporting:
 
 **Exit evidence:** onboarding/support acceptance cases, accessible handoff states, authenticated role checks, delivery receipts for any configured service, and a clear path to a human operator.
 
+**Support handoff draft checkpoint:** The existing Support page now lets a user explicitly copy a submitted guidance question into the portal request form for review. Later edits to the question are not silently copied, an existing request draft is not overwritten, and no ticket is saved until the user selects Save request. Focus moves to Subject so the user can complete the request. The browser flow and local release gate passed; external delivery and named support ownership remain open.
+
 ### Phase C — payment confirmations and records (Critical before enabling any MGT billing; blocked for retailer purchases)
 
 | Capability | Current status | Planned handling |
