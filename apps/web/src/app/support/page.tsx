@@ -32,7 +32,7 @@ export default function Support(){
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy||!subject.trim()||!message.trim())return;
   setBusy(true);setError('');setFeedback('');
-  try{await hub('/support',{subject:subject.trim(),message:message.trim()});setSubject('');setMessage('');setGuideQuestion('');setFeedback('Saved to your portal requests.');}
+  try{const saved=await hub('/support',{subject:subject.trim(),message:message.trim()});setSubject('');setMessage('');setGuideQuestion('');setFeedback('Saved in your portal requests. Reference: '+saved.request.id+'. External delivery is not enabled.');}
   catch(e){setError((e as Error).message);}
   finally{setBusy(false);}
  }
@@ -63,7 +63,7 @@ export default function Support(){
    {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
 
-  {feedback&&<p className="notice success" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
+  {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
   <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" className="panel stack support-form" onSubmit={submit}>
    <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
    <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
@@ -71,6 +71,6 @@ export default function Support(){
    <span className="muted" id="support-count">{message.length} / 4,000 characters</span>
    <button className="button primary" disabled={busy||!subject.trim()||!message.trim()}>{busy?'Saving…':'Save request'}</button>
   </form>
-  <section className="support-history" aria-labelledby="requests-heading"><div className="row"><h2 id="requests-heading">Your requests</h2>{!state.loading&&!state.error&&<span className="pill">{state.data?.tickets.length||0} saved</span>}</div><LoadState {...state} retry={state.reload}/>{!state.loading&&!state.error&&<>{state.data?.tickets.map((t:any)=><article className="panel support-ticket" key={t.id}><div className="row"><h3>{t.subject}</h3><span className="pill">{String(t.status).replace(/_/g,' ')}</span></div><p className="support-message">{t.message}</p>{t.replies.length>0?<section className="support-replies" aria-label="Support replies"><h4>Replies</h4>{t.replies.map((r:any,i:number)=><blockquote key={i}>{r.text}</blockquote>)}</section>:<p className="muted">No replies yet.</p>}</article>)}{state.data?.tickets.length===0&&<div className="empty"><h3>No requests yet.</h3><p>Requests you save will appear here, together with any replies.</p></div>}</>}</section>
+  <section className="support-history" aria-labelledby="requests-heading"><div className="row"><h2 id="requests-heading">Your requests</h2>{!state.loading&&!state.error&&<span className="pill">{state.data?.tickets.length||0} saved</span>}</div><LoadState {...state} retry={state.reload}/>{!state.loading&&!state.error&&<>{state.data?.tickets.map((t:any)=><article className="panel support-ticket" key={t.id}><div className="row"><h3>{t.subject}</h3><span className="pill">{String(t.status).replace(/_/g,' ')}</span></div><p className="muted support-reference">Reference: {t.id}{t.created_at?' · Saved '+new Date(t.created_at).toLocaleString():''}</p><p className="support-message">{t.message}</p>{t.replies.length>0?<section className="support-replies" aria-label="Support replies"><h4>Replies</h4>{t.replies.map((r:any,i:number)=><blockquote key={i}>{r.text}</blockquote>)}</section>:<p className="muted">No replies yet.</p>}</article>)}{state.data?.tickets.length===0&&<div className="empty"><h3>No requests yet.</h3><p>Requests you save will appear here, together with any replies.</p></div>}</>}</section>
  </AppFrame>;
 }

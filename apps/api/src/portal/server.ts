@@ -268,7 +268,9 @@ export async function createPortal(options:PortalOptions){
  });
  get('/support',async(req,res)=>res.json({tickets:await db.tx(async r=>(await r.list('tickets')).filter(t=>t.actor===req.actor))}));
  post('/support',async(req,res)=>{
-  const subject=text(req.body.subject,150),message=text(req.body.message,4000);await db.tx(async r=>{await rate(r,'ticket:'+req.actor,5,3600000);const id=randomUUID();await r.put('tickets',id,{id,actor:req.actor,email:req.account?.email||null,subject,message,status:'open',replies:[],created_at:now()});});res.json({saved:true});
+  const subject=text(req.body.subject,150),message=text(req.body.message,4000);
+  const request=await db.tx(async r=>{await rate(r,'ticket:'+req.actor,5,3600000);const id=randomUUID(),created_at=now();await r.put('tickets',id,{id,actor:req.actor,email:req.account?.email||null,subject,message,status:'open',replies:[],created_at});return{id,created_at,status:'open'};});
+  res.json({saved:true,request});
  });
  get('/account/export',async(req,res)=>{account(req);const exported=await db.tx(async r=>({profile:await r.get('profiles',req.actor)||null,style_profile:await r.get('style_profiles',req.actor)||null,reminders:await r.get('reminders',req.actor)||[],orders:(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder),tickets:(await r.list('tickets')).filter(t=>t.actor===req.actor),saved_retailers:await r.get('saved_retailers',req.actor)||[],subscriptions:await Promise.all(['consumer','vendor'].map(async audience=>({audience,record:publicSubscriptionRecord(await r.get('subscriptions',req.actor+':'+audience))}))),deletion_request:await r.get('deletion_requests',req.actor)||null,exported_at:now()}));res.setHeader('Content-Disposition','attachment; filename="mgt-my-data.json"');res.json(exported);});
  get('/account/deletion-request',async(req,res)=>{account(req);res.json({request:await db.tx(r=>r.get('deletion_requests',req.actor))||null});});

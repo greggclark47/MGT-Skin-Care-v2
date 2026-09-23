@@ -1,8 +1,8 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.4
+**Version:** 1.5
 **Revision date:** 2026-09-23
-**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest local Support checkpoint `f075a43`
+**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support checkpoints verified locally on 2026-09-23
 **Status:** Assistant API, Support guidance, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
@@ -66,6 +66,8 @@ Use these status labels in implementation and reporting:
 **Exit evidence:** onboarding/support acceptance cases, accessible handoff states, authenticated role checks, delivery receipts for any configured service, and a clear path to a human operator.
 
 **Support handoff draft checkpoint:** The existing Support page now lets a user explicitly copy a submitted guidance question into the portal request form for review. Later edits to the question are not silently copied, an existing request draft is not overwritten, and no ticket is saved until the user selects Save request. Focus moves to Subject so the user can complete the request. The browser flow and local release gate passed; external delivery and named support ownership remain open.
+
+**Request-reference checkpoint:** Saving a Portal Support request now returns its server-generated reference, save time and initial status. The confirmation and customer history display that reference, and authorized operators see the same reference in their request view. A local browser save confirmed the receipt matches the list; the portal integration test verifies server authority and customer isolation. The full local gate passed at `work/verification/2026-09-23T15-54-31-331Z/report.md`. This is a portal record, not proof of external delivery or a committed response time. Named ownership, triage states and live delivery remain open.
 
 ### Phase C — payment confirmations and records (Critical before enabling any MGT billing; blocked for retailer purchases)
 
