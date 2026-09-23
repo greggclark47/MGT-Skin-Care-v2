@@ -59,6 +59,12 @@ export const EVENT_REGISTRY: Record<string, EventDefinition> = {
   // --- Coach / AI ---
   'coach.message_sent':   { name: 'coach.message_sent',   privacy_class: 'sen', retention_class: 'd30',  required_properties: [], purpose: 'Coach usage volume; message CONTENT is never an event property' },
   'ai.response_served':   { name: 'ai.response_served',   privacy_class: 'pub', retention_class: 'd180', required_properties: ['task_type', 'used_fallback'], purpose: 'AI economics and fallback-rate alerting' },
+
+  // --- Support operations — aggregate counters only; no question or ticket content ---
+  'support.guidance_requested': { name: 'support.guidance_requested', privacy_class: 'pub', retention_class: 'agg', required_properties: ['role'], purpose: 'Measure which bounded guidance routes are used' },
+  'support.handoff_offered': { name: 'support.handoff_offered', privacy_class: 'pub', retention_class: 'agg', required_properties: ['reason'], purpose: 'Measure when guidance needs Portal Support' },
+  'support.request_saved': { name: 'support.request_saved', privacy_class: 'pub', retention_class: 'agg', required_properties: ['request_type', 'source'], purpose: 'Measure completed support handoffs by approved category' },
+  'support.operator_updated': { name: 'support.operator_updated', privacy_class: 'pub', retention_class: 'agg', required_properties: ['status'], purpose: 'Measure request workflow outcomes' },
 };
 
 export function getEventDefinition(name: string): EventDefinition | undefined {

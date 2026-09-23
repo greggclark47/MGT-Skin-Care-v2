@@ -21,6 +21,9 @@ const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision
 const PROFILE_MERGE_SCOPES=['profiles','carts','reminders','saved_retailers','style_profiles'] as const;
 type PendingProfileMerge={id:string;guest_actor:string;account_id:string;email:string;created_at:string;expires_at:string};
 const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
+const SUPPORT_TYPES=['portal_help','onboarding','routine_guidance','product_retailer','account_privacy'] as const;
+const SUPPORT_SOURCES=['support_form','guided_handoff'] as const;
+const SUPPORT_STATUSES=['open','in_review','waiting_customer','closed'] as const;
 const routeLabel=(task:unknown)=>({coach_answer:'Guided answers',operator_analysis:'Complex review',product_why:'Product explanations',coach_routine_command:'Routine guidance',routine_optimization_deep:'Deep routine review',premium_consultation:'Premium consultation',vision_attributes:'Visual attributes',embed:'Knowledge indexing'} as Record<string,string>)[String(task)]||'Other analysis';
 const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
 function publicOrder(order:any){
@@ -33,6 +36,15 @@ function publicSubscriptionRecord(record:any){
   cancel_at_period_end:record.cancel_at_period_end===true,trial_end:record.trial_end||null,
   current_period_end:record.current_period_end||null,cycle:['monthly','annual'].includes(record.cycle)?record.cycle:null,
   trial_used:record.trial_used===true};
+}
+function publicSupportTicket(ticket:any){
+ return {id:ticket.id,subject:ticket.subject,message:ticket.message,status:SUPPORT_STATUSES.includes(ticket.status)?ticket.status:'open',request_type:SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help',replies:Array.isArray(ticket.replies)?ticket.replies.map((reply:any)=>({text:reply.text,at:reply.at})):[],created_at:ticket.created_at||null,updated_at:ticket.updated_at||ticket.created_at||null};
+}
+async function supportMetric(db:Records,event:string,dimension:string){
+ const date=now().slice(0,10),id=`${date}:${event}:${dimension}`;
+ await db.lock('support-metric:'+id);
+ const existing=await db.get<any>('support_metrics',id);
+ await db.put('support_metrics',id,{id,date,event,dimension,count:(Number(existing?.count)||0)+1,updated_at:now()});
 }
 async function audit(db:Records,actor:string,action:string,target:string){const id=randomUUID();await db.put('audit',id,{id,actor,action,target,at:now()});}
 function profileInput(b:any):SkinProfileInput{
@@ -220,12 +232,16 @@ export async function createPortal(options:PortalOptions){
   const message=text(req.body.message,1800);
   await db.tx(r=>rate(r,'assistant:'+req.actor,30,3600000));
   const route=routeAssistantRequest(req.body.role,message);
+  await db.tx(async r=>{await supportMetric(r,'guidance_requested',route.role);if(route.kind!=='reviewed_ai'&&route.next_step?.path==='/support')await supportMetric(r,'handoff_offered',route.category);});
   if(route.kind!=='reviewed_ai')return res.json(route);
   try{
    const answer=await reviewedAnswer(req,message);
-   res.json({...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null});
+   const result={...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null};
+   if(result.next_step)await db.tx(r=>supportMetric(r,'handoff_offered','no_match'));
+   res.json(result);
   }catch(error){
    if(!(error instanceof Fault)||!['knowledge_pending','ai_not_configured','ai_unavailable'].includes(error.code))throw error;
+   await db.tx(r=>supportMetric(r,'handoff_offered','reviewed_unavailable'));
    res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'}});
   }
  });
@@ -266,13 +282,16 @@ export async function createPortal(options:PortalOptions){
   await db.tx(r=>audit(r,operator.id,'ai.budget_reconciled',id));
   res.json(result);
  });
- get('/support',async(req,res)=>res.json({tickets:await db.tx(async r=>(await r.list('tickets')).filter(t=>t.actor===req.actor))}));
+ get('/support',async(req,res)=>res.json({tickets:await db.tx(async r=>(await r.list<any>('tickets')).filter(t=>t.actor===req.actor).map(publicSupportTicket))}));
  post('/support',async(req,res)=>{
   const subject=text(req.body.subject,150),message=text(req.body.message,4000);
-  const request=await db.tx(async r=>{await rate(r,'ticket:'+req.actor,5,3600000);const id=randomUUID(),created_at=now();await r.put('tickets',id,{id,actor:req.actor,email:req.account?.email||null,subject,message,status:'open',replies:[],created_at});return{id,created_at,status:'open'};});
+  const request_type=typeof req.body.request_type==='string'?req.body.request_type:'portal_help',source=typeof req.body.source==='string'?req.body.source:'support_form';
+  check(SUPPORT_TYPES.includes(request_type as typeof SUPPORT_TYPES[number]),400,'support_type_invalid','Choose a supported request type.');
+  check(SUPPORT_SOURCES.includes(source as typeof SUPPORT_SOURCES[number]),400,'support_source_invalid','Choose a supported request source.');
+  const request=await db.tx(async r=>{await rate(r,'ticket:'+req.actor,5,3600000);const id=randomUUID(),created_at=now();await r.put('tickets',id,{id,actor:req.actor,email:req.account?.email||null,subject,message,status:'open',request_type,source,replies:[],created_at,updated_at:created_at});await supportMetric(r,'request_saved',`${request_type}:${source}`);return{id,created_at,status:'open',request_type};});
   res.json({saved:true,request});
  });
- get('/account/export',async(req,res)=>{account(req);const exported=await db.tx(async r=>({profile:await r.get('profiles',req.actor)||null,style_profile:await r.get('style_profiles',req.actor)||null,reminders:await r.get('reminders',req.actor)||[],orders:(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder),tickets:(await r.list('tickets')).filter(t=>t.actor===req.actor),saved_retailers:await r.get('saved_retailers',req.actor)||[],subscriptions:await Promise.all(['consumer','vendor'].map(async audience=>({audience,record:publicSubscriptionRecord(await r.get('subscriptions',req.actor+':'+audience))}))),deletion_request:await r.get('deletion_requests',req.actor)||null,exported_at:now()}));res.setHeader('Content-Disposition','attachment; filename="mgt-my-data.json"');res.json(exported);});
+ get('/account/export',async(req,res)=>{account(req);const exported=await db.tx(async r=>({profile:await r.get('profiles',req.actor)||null,style_profile:await r.get('style_profiles',req.actor)||null,reminders:await r.get('reminders',req.actor)||[],orders:(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder),tickets:(await r.list<any>('tickets')).filter(t=>t.actor===req.actor).map(publicSupportTicket),saved_retailers:await r.get('saved_retailers',req.actor)||[],subscriptions:await Promise.all(['consumer','vendor'].map(async audience=>({audience,record:publicSubscriptionRecord(await r.get('subscriptions',req.actor+':'+audience))}))),deletion_request:await r.get('deletion_requests',req.actor)||null,exported_at:now()}));res.setHeader('Content-Disposition','attachment; filename="mgt-my-data.json"');res.json(exported);});
  get('/account/deletion-request',async(req,res)=>{account(req);res.json({request:await db.tx(r=>r.get('deletion_requests',req.actor))||null});});
  post('/account/deletion-request',async(req,res)=>{const user=account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm the deletion request.');const request=await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const existing=await r.get<any>('deletion_requests',req.actor);if(existing?.status==='processing')throw new Fault(409,'deletion_in_progress','Account deletion is already in progress.');if(existing?.status==='pending'){const normalized={...existing,request_id:existing.request_id||randomUUID(),user_id:existing.user_id||user.id};await r.put('deletion_requests',req.actor,normalized);return normalized;}const requested_at=now(),created={request_id:randomUUID(),actor:req.actor,user_id:user.id,requested_at,status:'pending',not_before:new Date(Date.now()+30*86400000).toISOString(),attempts:0};await r.put('deletion_requests',req.actor,created);await audit(r,req.actor,'account.deletion_requested','self');return created;});res.json({requested:true,request});});
  post('/account/deletion-cancel',async(req,res)=>{account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm cancellation of the deletion request.');await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const request=await r.get<any>('deletion_requests',req.actor);check(request,404,'deletion_request_missing','No deletion request was found.');check(request.status==='pending',409,'deletion_in_progress','Account deletion is already in progress and cannot be cancelled.');await audit(r,req.actor,'account.deletion_cancelled','self');await r.remove('deletion_requests',req.actor);});res.json({cancelled:true});});
@@ -406,6 +425,16 @@ export async function createPortal(options:PortalOptions){
   });
   res.json({account:updated});
  });
+ get('/admin/support-metrics',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const since=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const snapshot=await db.tx(async r=>({tickets:await r.list<any>('tickets'),metrics:(await r.list<any>('support_metrics')).filter(item=>item.date>=since)}));
+  const tickets=snapshot.tickets.filter(ticket=>typeof ticket.created_at==='string'&&ticket.created_at.slice(0,10)>=since);
+  const statuses=Object.fromEntries(SUPPORT_STATUSES.map(status=>[status,tickets.filter(ticket=>(SUPPORT_STATUSES.includes(ticket.status)?ticket.status:'open')===status).length]));
+  const request_types=Object.fromEntries(SUPPORT_TYPES.map(type=>[type,tickets.filter(ticket=>(SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help')===type).length]));
+  const events=snapshot.metrics.reduce((totals:any,item:any)=>{totals[item.event]=(totals[item.event]||0)+(Number(item.count)||0);return totals;},{});
+  res.json({window_days:30,total_requests:tickets.length,statuses,request_types,events,privacy_note:'Aggregate counts and approved categories only. Customer messages, questions, account identifiers and email addresses are excluded.'});
+ });
  get('/admin',async(req,res)=>{const user=role(req,['superadmin','catalog_editor','sme','compliance','viewer']),canOperate=user.roles.some(item=>['superadmin','compliance'].includes(item));res.json(await db.tx(async r=>({roles:user.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:canOperate?(await r.list('orders')).map(publicOrder):[],tickets:canOperate?await r.list('tickets'):[],partners:canOperate?await r.list('partners'):[],jobs:canOperate?await r.list('jobs'):[],audit:(await r.list<any>('audit')).slice(-100).map(({id,action,at})=>({id,action,at})),company:await r.get('settings','company')||null})));});
  post('/admin/product',async(req,res)=>{const u=role(req,['catalog_editor','superadmin']);const b=req.body;const id=text(b.id,100),name=text(b.name,120);check(Number.isInteger(b.price_cents)&&b.price_cents>0&&b.price_cents<1000000,400,'invalid_price','Invalid product price.');check(Number.isInteger(b.stock)&&b.stock>=0,400,'invalid_stock','Invalid stock quantity.');check(['cleanser','toner','serum','treatment','moisturizer','sunscreen','eye'].includes(b.slot),400,'invalid_slot','Choose a supported routine slot.');check(Array.isArray(b.ingredients)&&b.ingredients.length>0&&b.ingredients.length<=100&&b.ingredients.every((i:any)=>typeof i==='string'&&/^[a-z0-9_]{1,80}$/.test(i)),400,'ingredients_required','Use normalized ingredient keys.');
   await db.tx(async r=>{const old=await r.get('products',id);await r.put('products',id,{id,name,description:text(b.description,1000),slot:b.slot,ingredients:b.ingredients,price_cents:b.price_cents,stock:b.stock,merchant_id:text(b.merchant_id,100),brand_id:text(b.brand_id||b.merchant_id,100),status:'draft',approved:false,sample:false,concern_tags:[],concern_weights:{},type_fit:{},updated_by:u.id,created_at:old?.created_at||now()});await audit(r,u.id,'product.draft',id);});res.json({saved:true});
@@ -415,7 +444,15 @@ export async function createPortal(options:PortalOptions){
  post('/admin/knowledge/approve',async(req,res)=>{const u=role(req,['sme']);const id=text(req.body.id,100);await db.tx(async r=>{const a=await r.get('knowledge',id);check(a&&a.author_id!==u.id,409,'approval_invalid','A second reviewer must approve this article.');a.status='approved';a.approved_by=u.id;a.approved_at=now();await r.put('knowledge',id,a);await audit(r,u.id,'knowledge.approved',id);});res.json({approved:true});});
  post('/admin/rule',async(req,res)=>{const u=role(req,['sme','superadmin']);const b=req.body,key=text(b.ingredient_key,80);check(/^[a-z0-9_]+$/.test(key)&&typeof b.sensitivity_ceiling_required==='number'&&b.sensitivity_ceiling_required>=0&&b.sensitivity_ceiling_required<=1,400,'rule_invalid','Check the ingredient key and tolerance threshold.');await db.tx(async r=>{const old=await r.get('rules',key);await r.put('rules',key,{ingredient_key:key,display_name:text(b.display_name,100),sensitivity_ceiling_required:b.sensitivity_ceiling_required,triggers_avoid_flag:null,rationale:text(b.rationale,1000),version:(old?.version||0)+1,status:'draft',author_id:u.id,sample:false});await audit(r,u.id,'rule.draft',key);});res.json({saved:true});});
  post('/admin/rule/approve',async(req,res)=>{const u=role(req,['sme']);const key=text(req.body.ingredient_key,80);await db.tx(async r=>{const rule=await r.get('rules',key);check(rule&&!rule.sample&&rule.author_id!==u.id,409,'approval_invalid','An independent reviewer must approve this rule.');rule.status='approved';rule.sme_approved_by=u.id;rule.sme_approved_at=now();await r.put('rules',key,rule);await audit(r,u.id,'rule.approved',key);});res.json({approved:true});});
- post('/admin/ticket',async(req,res)=>{const u=role(req,['superadmin','compliance']);const id=text(req.body.id,100);await db.tx(async r=>{const t=await r.get('tickets',id);check(t,404,'ticket_missing','Ticket not found.');t.replies.push({text:text(req.body.reply,4000),at:now()});t.status=req.body.close===true?'closed':'open';await r.put('tickets',id,t);await audit(r,u.id,'ticket.replied',id);});res.json({saved:true});});
+ post('/admin/ticket',async(req,res)=>{
+  const u=role(req,['superadmin','compliance']),id=text(req.body.id,100),status=req.body.status;
+  check(typeof status==='string'&&SUPPORT_STATUSES.includes(status as typeof SUPPORT_STATUSES[number]),400,'support_status_invalid','Choose a supported request status.');
+  const reply=typeof req.body.reply==='string'?req.body.reply.trim():'';
+  check(reply.length<=4000,400,'support_reply_invalid','Keep the reply within 4,000 characters.');
+  check(status==='in_review'||reply.length>0,400,'support_reply_required','Add a customer-facing reply for this status change.');
+  await db.tx(async r=>{const t=await r.get<any>('tickets',id);check(t,404,'ticket_missing','Ticket not found.');check(status!==t.status||reply.length>0||t.assigned_to!==u.id,409,'support_unchanged','Choose a different status or add a reply.');const changed_at=now();if(reply)t.replies=[...(Array.isArray(t.replies)?t.replies:[]),{text:reply,at:changed_at}];t.status=status;t.assigned_to=u.id;t.updated_at=changed_at;if(reply&&!t.first_response_at)t.first_response_at=changed_at;await r.put('tickets',id,t);await supportMetric(r,'operator_updated',status);await audit(r,u.id,'ticket.updated',id);});
+  res.json({saved:true,status});
+ });
  post('/admin/fulfill',async(req,res)=>{const u=role(req,['superadmin']);const id=text(req.body.id,100),tracking=text(req.body.tracking,150);await db.tx(async r=>{const o=await r.get('orders',id);check(o&&o.status==='paid',409,'order_not_paid','Only confirmed paid orders can be fulfilled.');o.status='fulfilled';o.tracking=tracking;o.fulfilled_at=now();await r.put('orders',id,o);await r.put('jobs','fulfill_'+id,{id:'fulfill_'+id,kind:'fulfillment',order_id:id,status:'completed',completed_at:now()});await audit(r,u.id,'order.fulfilled',id);});res.json({saved:true});});
  post('/partners/onboard',async(req,res)=>{const u=account(req);check(stripe,503,'payments_unconfigured','Partner onboarding is awaiting launch configuration.');
   check(req.body.request===true,400,'request_required','Confirm your partner application.');const key='partner_'+u.id;

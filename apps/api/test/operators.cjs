@@ -18,7 +18,7 @@ const {LocalStore}=require('../dist/portal/store');
   await db.tx(async r=>{
    await r.put('accounts','admin',{id:'admin',email:'admin@example.test',roles:['superadmin']});
    await r.put('accounts','compliance',{id:'compliance',email:'compliance@example.test',roles:['compliance']});
-   await r.put('tickets','private_ticket',{id:'private_ticket',actor:'user_private',email:'private@example.test',subject:'Private',message:'Private support text',status:'open',replies:[]});
+   await r.put('tickets','private_ticket',{id:'private_ticket',actor:'user_private',email:'private@example.test',subject:'Private',message:'Private support text',status:'open',replies:[],created_at:new Date().toISOString()});
    await r.put('orders','private_order',{id:'private_order',actor:'user_private',email:'private@example.test',status:'fulfilled'});
    await r.put('partners','private_partner',{id:'private_partner',email:'private@example.test',account_id:'acct_private'});
    await r.put('audit','private_audit',{id:'private_audit',actor:'user_private',target:'private_target',action:'private.action',at:new Date().toISOString()});
@@ -34,6 +34,9 @@ const {LocalStore}=require('../dist/portal/store');
   assert.equal((await guest('/admin/subscription-webhooks')).status,401);
   assert.equal((await compliance('/admin/subscription-webhooks')).status,200);
   assert.equal((await target('/admin/subscription-webhooks')).status,403);
+  assert.equal((await guest('/admin/support-metrics')).status,401);
+  const supportMetrics=await compliance('/admin/support-metrics');assert.equal(supportMetrics.status,200);assert.equal(supportMetrics.data.total_requests,1);assert.equal(supportMetrics.data.request_types.portal_help,1);assert(!JSON.stringify(supportMetrics.data).includes('Private support text'));assert(!JSON.stringify(supportMetrics.data).includes('private@example.test'));
+  assert.equal((await target('/admin/support-metrics')).status,403);
   assert.equal((await compliance('/admin/operators/lookup',{email:'target@example.test'})).status,403);
   assert.equal((await compliance('/admin/operators/roles',{id:'target',email:'target@example.test',roles:['viewer'],expected_roles:[],expected_revision:0,confirm:true})).status,403);
   assert.equal((await admin('/admin/operators/lookup',{email:'target@example.test'},{'x-csrf-token':'wrong'})).status,403);

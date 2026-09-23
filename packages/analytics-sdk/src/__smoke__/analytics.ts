@@ -90,6 +90,9 @@ async function main() {
     check('no event lacks privacy/retention/purpose', bad.length === 0, bad.map((b) => b.name));
     const coachContent = EVENT_REGISTRY['coach.message_sent'].required_properties;
     check('coach events never require message content', !coachContent.some((p) => /text|message|content|body/.test(p)), coachContent);
+    const supportEvents = Object.values(EVENT_REGISTRY).filter((event) => event.name.startsWith('support.'));
+    check('support events are aggregate-only', supportEvents.length === 4 && supportEvents.every((event) => event.retention_class === 'agg'), supportEvents);
+    check('support events never require customer content', supportEvents.every((event) => !event.required_properties.some((property) => /text|message|content|body|email|account|user/.test(property))), supportEvents);
   }
 
   console.log(failures === 0 ? '\nANALYTICS SDK: ALL CHECKS PASSED' : `\nANALYTICS SDK: ${failures} CHECK(S) FAILED`);

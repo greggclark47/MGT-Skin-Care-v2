@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.5
+**Version:** 1.6
 **Revision date:** 2026-09-23
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support checkpoints verified locally on 2026-09-23
-**Status:** Assistant API, Support guidance, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
+**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate Support measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -68,6 +68,12 @@ Use these status labels in implementation and reporting:
 **Support handoff draft checkpoint:** The existing Support page now lets a user explicitly copy a submitted guidance question into the portal request form for review. Later edits to the question are not silently copied, an existing request draft is not overwritten, and no ticket is saved until the user selects Save request. Focus moves to Subject so the user can complete the request. The browser flow and local release gate passed; external delivery and named support ownership remain open.
 
 **Request-reference checkpoint:** Saving a Portal Support request now returns its server-generated reference, save time and initial status. The confirmation and customer history display that reference, and authorized operators see the same reference in their request view. A local browser save confirmed the receipt matches the list; the portal integration test verifies server authority and customer isolation. The full local gate passed at `work/verification/2026-09-23T15-54-31-331Z/report.md`. This is a portal record, not proof of external delivery or a committed response time. Named ownership, triage states and live delivery remain open.
+
+**Phase B1 — typed intake checkpoint:** Portal Support now accepts five server-validated request types and one of two approved sources: the direct form or an explicit guidance handoff. The selected type is visible in customer history and the operations view. Client-provided unknown categories and sources are rejected, and the customer response excludes actor, email, internal assignment and intake-source fields.
+
+**Phase B2 — lifecycle and assignment checkpoint:** Authorized superadmin and compliance operators can move a request through open, in-review, waiting-for-customer and resolved states. Updating a request assigns it to that operator, records the update time and first response, and adds a timestamped customer reply when supplied. A customer-facing reply is required for waiting, resolved and reopened transitions. Customers see the new state and replies without receiving operator identity.
+
+**Phase D1 — privacy-safe Support measurement checkpoint:** The analytics registry now classifies four Support events as aggregate-only. The server records daily counters for guidance requests, Support handoffs, saved request types/sources and operator updates; the operations panel shows 30-day totals and category counts. It does not retain question text, ticket messages, email addresses, account IDs or operator IDs in these metrics. Focused API, authorization, assistant-policy, analytics-contract, production web build and browser intake checks passed. Full-gate evidence is recorded with the matching release checkpoint.
 
 ### Phase C — payment confirmations and records (Critical before enabling any MGT billing; blocked for retailer purchases)
 
