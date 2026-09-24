@@ -34,6 +34,7 @@ export default function Support(){
   catch(e){setGuideError((e as Error).message);}
   finally{setGuideBusy(false);}
  }
+ function recordNextStep(path:string){void hub('/assistant/action',{action:'next_step_opened',role,path}).catch(()=>{});}
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy||!subject.trim()||!message.trim())return;
   setBusy(true);setError('');setFeedback('');
@@ -65,7 +66,7 @@ export default function Support(){
     {guideError&&<p ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
-   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
+   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
 
   {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}

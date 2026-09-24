@@ -10,7 +10,7 @@ import {LocalStore,PgStore,startupMigrations,type Store,type Records} from './st
 import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,type HubRequest,type Session} from './security';
 import {initializeCatalog,match,quote,type Product} from './catalog';
 import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,type Knowledge} from './ai';
-import {routeAssistantRequest} from './assistant';
+import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import {stripeFromEnv,processStripeEvent,type StripeClient} from './payments';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
@@ -24,6 +24,7 @@ const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer']
 const SUPPORT_TYPES=['portal_help','onboarding','routine_guidance','product_retailer','account_privacy'] as const;
 const SUPPORT_SOURCES=['support_form','guided_handoff'] as const;
 const SUPPORT_STATUSES=['open','in_review','waiting_customer','closed'] as const;
+const ASSISTANT_NEXT_STEPS=['/skin-match','/membership','/orders','/shop','/account','/support'] as const;
 const routeLabel=(task:unknown)=>({coach_answer:'Guided answers',operator_analysis:'Complex review',product_why:'Product explanations',coach_routine_command:'Routine guidance',routine_optimization_deep:'Deep routine review',premium_consultation:'Premium consultation',vision_attributes:'Visual attributes',embed:'Knowledge indexing'} as Record<string,string>)[String(task)]||'Other analysis';
 const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
 function publicOrder(order:any){
@@ -246,17 +247,28 @@ export async function createPortal(options:PortalOptions){
   await db.tx(r=>rate(r,'assistant:'+req.actor,30,3600000));
   const route=routeAssistantRequest(req.body.role,message);
   await db.tx(async r=>{await supportMetric(r,'guidance_requested',route.role);if(route.kind!=='reviewed_ai'&&route.next_step?.path==='/support')await supportMetric(r,'handoff_offered',route.category);});
-  if(route.kind!=='reviewed_ai')return res.json(route);
+  if(route.kind!=='reviewed_ai'){
+   await db.tx(r=>supportMetric(r,'guidance_result',`${route.role}:${route.kind}:${route.category}`));
+   return res.json(route);
+  }
   try{
    const answer=await reviewedAnswer(req,message);
    const result={...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null};
-   if(result.next_step)await db.tx(r=>supportMetric(r,'handoff_offered','no_match'));
+   await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:${result.kind}:${route.category}`);if(result.next_step)await supportMetric(r,'handoff_offered','no_match');});
    res.json(result);
   }catch(error){
    if(!(error instanceof Fault)||!['knowledge_pending','ai_not_configured','ai_unavailable'].includes(error.code))throw error;
-   await db.tx(r=>supportMetric(r,'handoff_offered','reviewed_unavailable'));
+   await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:handoff:reviewed_unavailable`);await supportMetric(r,'handoff_offered','reviewed_unavailable');});
    res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'}});
   }
+ });
+ post('/assistant/action',async(req,res)=>{
+  const roleName=req.body.role,path=req.body.path;
+  check(typeof roleName==='string'&&ASSISTANT_ROLES.includes(roleName as typeof ASSISTANT_ROLES[number]),400,'assistant_role_invalid','Choose a supported help topic.');
+  check(req.body.action==='next_step_opened',400,'assistant_action_invalid','Choose a supported guidance action.');
+  check(typeof path==='string'&&ASSISTANT_NEXT_STEPS.includes(path as typeof ASSISTANT_NEXT_STEPS[number]),400,'assistant_path_invalid','Choose a supported portal destination.');
+  await db.tx(async r=>{await rate(r,'assistant-action:'+req.actor,60,3600000);await supportMetric(r,'next_step_opened',`${roleName}:${path}`);});
+  res.json({recorded:true});
  });
  post('/admin/ai/analyze',async(req,res)=>{
   const operator=role(req,['superadmin','compliance']);
@@ -446,7 +458,14 @@ export async function createPortal(options:PortalOptions){
   const statuses=Object.fromEntries(SUPPORT_STATUSES.map(status=>[status,tickets.filter(ticket=>(SUPPORT_STATUSES.includes(ticket.status)?ticket.status:'open')===status).length]));
   const request_types=Object.fromEntries(SUPPORT_TYPES.map(type=>[type,tickets.filter(ticket=>(SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help')===type).length]));
   const events=snapshot.metrics.reduce((totals:any,item:any)=>{totals[item.event]=(totals[item.event]||0)+(Number(item.count)||0);return totals;},{});
-  res.json({window_days:30,total_requests:tickets.length,statuses,request_types,events,privacy_note:'Aggregate counts and approved categories only. Customer messages, questions, account identifiers and email addresses are excluded.'});
+  const eventRows=(event:string)=>snapshot.metrics.filter(item=>item.event===event);
+  const sum=(rows:any[])=>rows.reduce((total,item)=>total+(Number(item.count)||0),0);
+  const dimensionTotals=(event:string)=>{const totals=new Map<string,number>();for(const item of eventRows(event)){const dimension=String(item.dimension);totals.set(dimension,(totals.get(dimension)||0)+(Number(item.count)||0));}return totals;};
+  const guidance_by_role=ASSISTANT_ROLES.map(assistantRole=>({role:assistantRole,requests:sum(eventRows('guidance_requested').filter(item=>item.dimension===assistantRole))})).filter(row=>row.requests);
+  const guidance_outcomes=[...dimensionTotals('guidance_result')].map(([dimension,count])=>{const [roleName,kind,...category]=dimension.split(':');return{role:roleName,kind,category:category.join(':'),count};});
+  const next_steps=[...dimensionTotals('next_step_opened')].map(([dimension,count])=>{const [roleName,...path]=dimension.split(':');return{role:roleName,path:path.join(':'),count};});
+  const completed_handoffs=sum(eventRows('request_saved').filter(item=>String(item.dimension).endsWith(':guided_handoff')));
+  res.json({window_days:30,total_requests:tickets.length,statuses,request_types,events,guidance_by_role,guidance_outcomes,next_steps,handoff_funnel:{offered:events.handoff_offered||0,support_opened:sum(eventRows('next_step_opened').filter(item=>String(item.dimension).endsWith(':/support'))),request_saved:completed_handoffs},interpretation:'Guidance and handoff counts are aggregate portal actions, not unique customers or guaranteed support outcomes.',privacy_note:'Aggregate counts and approved categories only. Customer messages, questions, account identifiers and email addresses are excluded.'});
  });
  get('/admin/referral-metrics',async(req,res)=>{
   role(req,['superadmin','compliance']);

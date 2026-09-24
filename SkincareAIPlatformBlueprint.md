@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.5-planning
+**Version:** 2.1.6-planning
 **Revision date:** 2026-09-24
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -186,6 +186,8 @@ Payment records remain separated by merchant. MGT does not issue confirmations o
 GTM work starts with consent-aware measurement and low-cost owned/organic learning. Affiliate attribution, partner claims, sponsored placement, and paid campaigns require written terms, approved disclosures, baseline economics, and a budget cap. Financial optimization must retain recommendation quality, safety, accessibility, and privacy controls. These items are planned and do not change the current release status.
 
 The first referral measurement baseline is now repository-ready: the portal counts allowlisted outbound retailer opens and saved-list changes as daily aggregates and exposes a 30-day retailer/segment summary only to superadmin and compliance roles. It retains no customer identity, profile, search, free text, retailer order, amount, revenue or profit data in those counters. The default retention period is 180 days. These actions must not be reported as unique customers, purchases, conversion, revenue or profit; partner agreements and commercial attribution remain unresolved.
+
+The assistant journey now has the same aggregate-only measurement boundary. Guidance results are grouped by the four bounded roles, and next-step selections are accepted only for approved internal portal paths. Authorized operators can compare handoffs offered, Support opened and guided requests saved without receiving questions, customer identity, account details or ticket content in the metrics. These are action counts rather than unique-user or guaranteed-resolution measures.
 
 The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 

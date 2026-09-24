@@ -1,6 +1,6 @@
 # MGT Skin Care — AI/LLM Infrastructure Migration v2
 
-**Version:** 2.1.5-planning
+**Version:** 2.1.6-planning
 **Revision date:** 2026-09-24
 **Status:** Canonical documentation for the verified repository branch  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
@@ -172,6 +172,8 @@ The detailed execution sequence is [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT-PH
 Payment status is separated by merchant: retailer confirmations and receipts belong to the retailer; MGT product checkout remains blocked; subscription billing has mocked local test coverage but remains disabled until prices, benefits, terms, and a provider environment are approved. A signed provider event, not a browser return page, is the basis for a future subscription confirmation. The GTM plan starts with consented, measurable owned/organic experiments and gates paid campaigns, affiliate claims, and profit reporting on measured baselines, written terms, and approved spend.
 
 The repository now includes a privacy-safe referral engagement baseline. It records only daily aggregate counts for allowlisted retailer destination opens and saved-list changes, presents a 30-day retailer/segment view to superadmin and compliance roles, and applies a configurable 180-day retention period. It excludes identity, profile, search, free text, retailer-site activity, order, amount, revenue and profit data. The results describe portal actions only and cannot support conversion, revenue or profit claims; partner terms and commercial attribution remain pending.
+
+Assistant journey measurement is implemented with the same aggregate retention control. The server groups outcomes by the four approved assistant roles and records next-step selections only for allowlisted internal destinations. Superadmin and compliance reporting shows guidance volume and the aggregate Support handoff funnel without question text, customer identifiers, account data, email addresses or ticket content. These counts do not establish unique users, support delivery or resolution quality.
 
 The first role-routing contract is locally implemented at commit `8444aa7`: `POST /api/hub/assistant` gives deterministic onboarding, support, account and payment handoffs, and sends signed-in, consented routine/product questions through the existing reviewed Coach path. Full local verification passed with evidence at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` adds a small Support-page guidance panel using the existing logo and layout; general onboarding and retailer directions were checked in the browser without an AI provider. API compilation, portal checks, web production build and 28-page proxy journey passed. Support delivery, OpenClaw runtime qualification, payment confirmation workflows and GTM execution remain planned. Production remains **NOT READY** because `infra/portal/.env` is absent and live data, provider, backup, container, catalog, and full accessibility gates remain open.
 

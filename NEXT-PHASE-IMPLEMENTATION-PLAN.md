@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.7
+**Version:** 1.8
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
-**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
+**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -102,6 +102,8 @@ Required implementation controls if subscription confirmations are approved: one
 7. **Protect quality while optimizing:** do not reduce source grounding, human review, accessibility, safety checks, or approved-model routing to improve short-term conversion or inference cost. Monitor golden-case quality, correction/handoff rates, complaints and privacy incidents alongside financial outcomes.
 
 **Phase D2 — referral engagement baseline checkpoint:** The Shop records daily aggregate counts when a visitor opens an allowlisted retailer destination or changes a saved-retailer state. The operations panel shows a 30-day retailer and segment view to superadmin and compliance roles. These counters contain no customer identifier, profile, search, free text, retailer-site activity, order, amount, revenue or profit data, and expire after 180 days by default. They measure portal actions, not unique customers, retailer purchases, conversion, revenue or profit. Commercial agreements and affiliate attribution remain pending.
+
+**Phase D3 — assistant journey measurement checkpoint:** The server records aggregate guidance outcomes by the four bounded assistant roles and accepts next-step selections only for the six approved portal destinations. The operations panel reports guidance volume and an offered → Support opened → request saved funnel. Arbitrary roles, action names and external URLs are rejected. The counters exclude question text, ticket content, customer identifiers, account details and email addresses, and use the same 180-day aggregate retention policy. Counts describe portal actions rather than unique people or guaranteed support outcomes.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
