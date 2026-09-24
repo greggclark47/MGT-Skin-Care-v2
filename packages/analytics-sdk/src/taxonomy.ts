@@ -67,6 +67,7 @@ export const EVENT_REGISTRY: Record<string, EventDefinition> = {
   'support.next_step_opened': { name: 'support.next_step_opened', privacy_class: 'pub', retention_class: 'agg', required_properties: ['role', 'path'], purpose: 'Measure selection of approved portal next steps' },
   'support.request_saved': { name: 'support.request_saved', privacy_class: 'pub', retention_class: 'agg', required_properties: ['request_type', 'source'], purpose: 'Measure completed support handoffs by approved category' },
   'support.operator_updated': { name: 'support.operator_updated', privacy_class: 'pub', retention_class: 'agg', required_properties: ['status'], purpose: 'Measure request workflow outcomes' },
+  'support.escalation_marked': { name: 'support.escalation_marked', privacy_class: 'pub', retention_class: 'agg', required_properties: ['reason'], purpose: 'Measure aggregate support escalation categories' },
 
   // --- External referral discovery — aggregate portal actions, never retailer sales ---
   'retailer.outbound_opened': { name: 'retailer.outbound_opened', privacy_class: 'pub', retention_class: 'agg', required_properties: ['retailer_id', 'segment'], purpose: 'Measure aggregate outbound retailer exploration' },
