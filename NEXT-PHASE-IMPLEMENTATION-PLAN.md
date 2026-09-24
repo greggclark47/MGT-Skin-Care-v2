@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.6
-**Revision date:** 2026-09-23
-**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support checkpoints verified locally on 2026-09-23
-**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate Support measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
+**Version:** 1.7
+**Revision date:** 2026-09-24
+**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
+**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -100,6 +100,8 @@ Required implementation controls if subscription confirmations are approved: one
 5. **Treat paid media as a later, capped experiment:** begin only after baseline funnel instrumentation and an approved ceiling exist. Use one hypothesis, one channel, one landing journey, a time-box and stop-loss. Compare qualified completion and retained use against total channel, creative, discount, support and service costs.
 6. **Use contribution measures:** incremental referral/partner revenue minus campaign, discount, content, provider inference, support, payment, refund/chargeback and operational costs where applicable. Report CAC, activation, retained use, referral click-through and qualified conversion with sample size and attribution limits. Avoid claiming profit from clicks, gross merchandise value, or modeled lifetime value without observed cohorts and contracted rates.
 7. **Protect quality while optimizing:** do not reduce source grounding, human review, accessibility, safety checks, or approved-model routing to improve short-term conversion or inference cost. Monitor golden-case quality, correction/handoff rates, complaints and privacy incidents alongside financial outcomes.
+
+**Phase D2 — referral engagement baseline checkpoint:** The Shop records daily aggregate counts when a visitor opens an allowlisted retailer destination or changes a saved-retailer state. The operations panel shows a 30-day retailer and segment view to superadmin and compliance roles. These counters contain no customer identifier, profile, search, free text, retailer-site activity, order, amount, revenue or profit data, and expire after 180 days by default. They measure portal actions, not unique customers, retailer purchases, conversion, revenue or profit. Commercial agreements and affiliate attribution remain pending.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 

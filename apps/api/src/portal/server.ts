@@ -46,6 +46,12 @@ async function supportMetric(db:Records,event:string,dimension:string){
  const existing=await db.get<any>('support_metrics',id);
  await db.put('support_metrics',id,{id,date,event,dimension,count:(Number(existing?.count)||0)+1,updated_at:now()});
 }
+async function referralMetric(db:Records,event:string,dimension:string){
+ const date=now().slice(0,10),id=`${date}:${event}:${dimension}`;
+ await db.lock('referral-metric:'+id);
+ const existing=await db.get<any>('referral_metrics',id);
+ await db.put('referral_metrics',id,{id,date,event,dimension,count:(Number(existing?.count)||0)+1,updated_at:now()});
+}
 async function audit(db:Records,actor:string,action:string,target:string){const id=randomUUID();await db.put('audit',id,{id,actor,action,target,at:now()});}
 function profileInput(b:any):SkinProfileInput{
  for(const [key,allowed] of Object.entries({skin_type:SKIN_TYPES,sensitivity:SKIN_SENSITIVITY,age_band:AGE_BANDS,current_routine:ROUTINE_LEVELS,desired_outcome:DESIRED_OUTCOMES,budget_range:BUDGET_RANGES}))check((allowed as readonly string[]).includes(b[key]),400,'invalid_profile','Please complete all profile questions.');
@@ -99,7 +105,14 @@ export async function createPortal(options:PortalOptions){
  const post=(path:string,fn:(r:HubRequest,s:Response)=>Promise<any>)=>app.post('/api/hub'+path,wrap(fn));
  get('/retailers',async(_req,res)=>res.json({retailers:RETAILERS,segments:SHOP_SEGMENTS,commerce:COMMERCE_MODEL}));
  get('/saved-retailers',async(req,res)=>res.json({ids:await db.tx(r=>r.get<string[]>('saved_retailers',req.actor))||[]}));
- post('/saved-retailers',async(req,res)=>{const id=text(req.body.id,100);check(RETAILERS.some(r=>r.id===id)&&typeof req.body.saved==='boolean',400,'invalid_retailer','Choose a listed retailer.');await db.tx(async r=>{const ids=await r.get<string[]>('saved_retailers',req.actor)||[];await r.put('saved_retailers',req.actor,req.body.saved?[...new Set([...ids,id])]:ids.filter(x=>x!==id));});res.json({saved:req.body.saved});});
+ post('/saved-retailers',async(req,res)=>{const id=text(req.body.id,100);check(RETAILERS.some(r=>r.id===id)&&typeof req.body.saved==='boolean',400,'invalid_retailer','Choose a listed retailer.');await db.tx(async r=>{const ids=await r.get<string[]>('saved_retailers',req.actor)||[],alreadySaved=ids.includes(id);await r.put('saved_retailers',req.actor,req.body.saved?[...new Set([...ids,id])]:ids.filter(x=>x!==id));if(alreadySaved!==req.body.saved)await referralMetric(r,req.body.saved?'retailer_saved':'retailer_unsaved',id);});res.json({saved:req.body.saved});});
+ post('/retailers/outbound',async(req,res)=>{
+  const id=text(req.body.id,100),retailer=RETAILERS.find(item=>item.id===id);check(retailer,400,'invalid_retailer','Choose a listed retailer.');
+  const segment=typeof req.body.segment==='string'?req.body.segment:'all';
+  check(segment==='all'||SHOP_SEGMENTS.some(item=>item.id===segment)&&retailer.segments?.includes(segment),400,'invalid_segment','Choose a segment listed for this retailer.');
+  await db.tx(async r=>{await rate(r,'retailer-outbound:'+req.actor,60,3600000);await referralMetric(r,'retailer_outbound',`${id}:${segment}`);});
+  res.json({recorded:true});
+ });
  get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?await r.get('deletion_requests',req.actor)||null:null}));res.json({csrf:req.csrf,account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
  get('/catalog',async(_req,res)=>res.json({products:await db.tx(async r=>(await r.list<Product>('products')).filter(p=>p.status==='active'&&(demo||p.approved&&!p.sample))),demo}));
  get('/company',async(_req,res)=>res.json(await db.tx(r=>r.get('settings','company'))||{name:'MGT Skin Care',legal_name:null,support_email:null,affiliations:[],policies_published:false}));
@@ -434,6 +447,15 @@ export async function createPortal(options:PortalOptions){
   const request_types=Object.fromEntries(SUPPORT_TYPES.map(type=>[type,tickets.filter(ticket=>(SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help')===type).length]));
   const events=snapshot.metrics.reduce((totals:any,item:any)=>{totals[item.event]=(totals[item.event]||0)+(Number(item.count)||0);return totals;},{});
   res.json({window_days:30,total_requests:tickets.length,statuses,request_types,events,privacy_note:'Aggregate counts and approved categories only. Customer messages, questions, account identifiers and email addresses are excluded.'});
+ });
+ get('/admin/referral-metrics',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const since=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const metrics=(await db.tx(r=>r.list<any>('referral_metrics'))).filter(item=>item.date>=since);
+  const count=(event:string,dimension?:(value:string)=>boolean)=>metrics.filter(item=>item.event===event&&(!dimension||dimension(String(item.dimension)))).reduce((total,item)=>total+(Number(item.count)||0),0);
+  const by_retailer=RETAILERS.map(retailer=>({retailer_id:retailer.id,name:retailer.name,outbound:count('retailer_outbound',value=>value.startsWith(retailer.id+':')),saved:count('retailer_saved',value=>value===retailer.id),unsaved:count('retailer_unsaved',value=>value===retailer.id)})).filter(row=>row.outbound||row.saved||row.unsaved);
+  const by_segment=SHOP_SEGMENTS.map(segment=>({segment:segment.id,outbound:count('retailer_outbound',value=>value.endsWith(':'+segment.id))})).filter(row=>row.outbound);
+  res.json({window_days:30,summary:{outbound:count('retailer_outbound'),saved:count('retailer_saved'),unsaved:count('retailer_unsaved')},by_retailer,by_segment,commercial_agreements:COMMERCE_MODEL.commercial_agreements,interpretation:'These are aggregate portal actions, not unique customers, retailer orders, revenue, conversion or profit.',privacy_note:'No customer identifiers, profiles, searches, free text or retailer-site activity are stored in these metrics.'});
  });
  get('/admin',async(req,res)=>{const user=role(req,['superadmin','catalog_editor','sme','compliance','viewer']),canOperate=user.roles.some(item=>['superadmin','compliance'].includes(item));res.json(await db.tx(async r=>({roles:user.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:canOperate?(await r.list('orders')).map(publicOrder):[],tickets:canOperate?await r.list('tickets'):[],partners:canOperate?await r.list('partners'):[],jobs:canOperate?await r.list('jobs'):[],audit:(await r.list<any>('audit')).slice(-100).map(({id,action,at})=>({id,action,at})),company:await r.get('settings','company')||null})));});
  post('/admin/product',async(req,res)=>{const u=role(req,['catalog_editor','superadmin']);const b=req.body;const id=text(b.id,100),name=text(b.name,120);check(Number.isInteger(b.price_cents)&&b.price_cents>0&&b.price_cents<1000000,400,'invalid_price','Invalid product price.');check(Number.isInteger(b.stock)&&b.stock>=0,400,'invalid_stock','Invalid stock quantity.');check(['cleanser','toner','serum','treatment','moisturizer','sunscreen','eye'].includes(b.slot),400,'invalid_slot','Choose a supported routine slot.');check(Array.isArray(b.ingredients)&&b.ingredients.length>0&&b.ingredients.length<=100&&b.ingredients.every((i:any)=>typeof i==='string'&&/^[a-z0-9_]{1,80}$/.test(i)),400,'ingredients_required','Use normalized ingredient keys.');

@@ -16,6 +16,10 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   await records.put('ai_routing_log','recent',{at:'2026-09-11T00:00:00.000Z'});
   await records.put('deletion_completions','old_proof',{completed_at:'2024-01-01T00:00:00.000Z'});
   await records.put('subscription_webhook_receipts','old_receipt',{last_received_at:'2024-01-01T00:00:00.000Z'});
+  await records.put('support_metrics','old_support_metric',{date:'2026-01-01',updated_at:'2026-01-01T00:00:00.000Z'});
+  await records.put('support_metrics','recent_support_metric',{date:'2026-09-11',updated_at:'2026-09-11T00:00:00.000Z'});
+  await records.put('referral_metrics','old_referral_metric',{date:'2026-01-01',updated_at:'2026-01-01T00:00:00.000Z'});
+  await records.put('referral_metrics','recent_referral_metric',{date:'2026-09-11',updated_at:'2026-09-11T00:00:00.000Z'});
  await records.put('reminders','user_1',[{product_id:'cleanser',due_at:'2026-09-12T11:00:00.000Z',paused:false},{product_id:'serum',due_at:'2026-09-13T11:00:00.000Z',paused:false}]);
  await records.put('backup_status','latest',{completed_at:'2026-09-12T10:00:00.000Z',location_identifier:'encrypted-offsite',checksum:'abc'});
   await records.put('accounts','erase_me',{id:'erase_me',email:'erase@example.test',roles:[]});
@@ -43,6 +47,10 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   assert.ok(await records.get('ai_routing_log','recent'));
   assert.equal(await records.get('deletion_completions','old_proof'),undefined);
   assert.equal(await records.get('subscription_webhook_receipts','old_receipt'),undefined);
+  assert.equal(await records.get('support_metrics','old_support_metric'),undefined);
+  assert.ok(await records.get('support_metrics','recent_support_metric'));
+  assert.equal(await records.get('referral_metrics','old_referral_metric'),undefined);
+  assert.ok(await records.get('referral_metrics','recent_referral_metric'));
   const reminders=await records.get('reminders','user_1');assert.ok(reminders[0].notification_id);
   const notifications=await records.entries('notifications');assert.equal(notifications.length,1);assert.equal(notifications[0].value.status,'delivered');
   assert.equal(await records.get('accounts','erase_me'),undefined);assert.equal(await records.get('profiles','user_erase_me'),undefined);assert.equal(await records.get('sessions','erase_session'),undefined);assert.equal(await records.get('tickets','erase_ticket'),undefined);

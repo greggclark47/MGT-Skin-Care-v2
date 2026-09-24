@@ -8,6 +8,7 @@ The phased build, test and production-readiness program is maintained in [`BUILD
 - Consumer and vendor subscription placements share /membership but have separate Stripe Price IDs, customer records, checkout attempts, and status records.
 - Product checkout, payouts, refunds and vendor transfers remain blocked. Buying a vendor subscription does not establish a commercial partnership or publish a listing.
 - Subscription pricing and paid feature entitlements remain TBD. No existing tab is paywalled, and no paid benefits are promised yet.
+- Shop outbound opens and saved-list changes are counted only as daily aggregate engagement. Authorized operations roles can view a 30-day retailer and segment summary; it contains no customer identity, skin profile, search, free text, order, amount, revenue or profit data. These counters expire after 180 days by default through `OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS`.
 
 ## Stripe setup
 1. Use a Stripe sandbox/test account first. Create separate recurring consumer and vendor Prices after prices and benefits are approved.

@@ -65,6 +65,10 @@ export const EVENT_REGISTRY: Record<string, EventDefinition> = {
   'support.handoff_offered': { name: 'support.handoff_offered', privacy_class: 'pub', retention_class: 'agg', required_properties: ['reason'], purpose: 'Measure when guidance needs Portal Support' },
   'support.request_saved': { name: 'support.request_saved', privacy_class: 'pub', retention_class: 'agg', required_properties: ['request_type', 'source'], purpose: 'Measure completed support handoffs by approved category' },
   'support.operator_updated': { name: 'support.operator_updated', privacy_class: 'pub', retention_class: 'agg', required_properties: ['status'], purpose: 'Measure request workflow outcomes' },
+
+  // --- External referral discovery — aggregate portal actions, never retailer sales ---
+  'retailer.outbound_opened': { name: 'retailer.outbound_opened', privacy_class: 'pub', retention_class: 'agg', required_properties: ['retailer_id', 'segment'], purpose: 'Measure aggregate outbound retailer exploration' },
+  'retailer.saved_changed': { name: 'retailer.saved_changed', privacy_class: 'pub', retention_class: 'agg', required_properties: ['retailer_id', 'saved'], purpose: 'Measure aggregate save and unsave actions' },
 };
 
 export function getEventDefinition(name: string): EventDefinition | undefined {

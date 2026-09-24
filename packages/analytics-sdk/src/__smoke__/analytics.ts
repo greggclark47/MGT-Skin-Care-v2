@@ -93,6 +93,9 @@ async function main() {
     const supportEvents = Object.values(EVENT_REGISTRY).filter((event) => event.name.startsWith('support.'));
     check('support events are aggregate-only', supportEvents.length === 4 && supportEvents.every((event) => event.retention_class === 'agg'), supportEvents);
     check('support events never require customer content', supportEvents.every((event) => !event.required_properties.some((property) => /text|message|content|body|email|account|user/.test(property))), supportEvents);
+    const retailerEvents = Object.values(EVENT_REGISTRY).filter((event) => event.name.startsWith('retailer.'));
+    check('retailer events are aggregate-only', retailerEvents.length === 2 && retailerEvents.every((event) => event.retention_class === 'agg'), retailerEvents);
+    check('retailer events contain no customer or transaction fields', retailerEvents.every((event) => !event.required_properties.some((property) => /user|account|email|profile|order|amount|revenue|profit|search/.test(property))), retailerEvents);
   }
 
   console.log(failures === 0 ? '\nANALYTICS SDK: ALL CHECKS PASSED' : `\nANALYTICS SDK: ${failures} CHECK(S) FAILED`);
