@@ -1,6 +1,6 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 2.0
+**Version:** 2.1
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
 **Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
@@ -108,6 +108,8 @@ Required implementation controls if subscription confirmations are approved: one
 **Phase B3 — owned escalation checkpoint:** An authorized superadmin or compliance operator can assign a fixed internal escalation reason while updating a request; the request is assigned to that operator and the customer receives only the updated status and any customer-facing reply. The supported reasons are content safety, account/privacy, billing scope, retailer purchase, technical issue, specialist review and other. Customer responses and account exports exclude internal assignment and escalation fields. The operations panel shows aggregate escalation selections by reason, not customer or ticket data. This is a local workflow record; it does not establish staffing, delivery or response-time commitments.
 
 **Phase F1 — shared navigation focus checkpoint:** The portal shell moves focus to the main landmark after an in-portal route change, so keyboard and screen-reader users reach the new page context. Opening the mobile menu moves focus to its first primary destination; Escape closes the menu and returns focus to Menu. The existing Skip to content link, reduced-motion support, visual design, routes and menu structure remain unchanged. This does not replace a full device, screen-reader, contrast or WCAG audit.
+
+**Phase F2 — rendered accessibility markup checkpoint:** The production proxy journey now checks all 29 portal routes for the shared Skip to content link, primary-navigation identity and label, main landmark, labeled policy navigation, and alternative-text attributes on rendered images. This protects the baseline markup from regressions without changing visible content, branding, or page structure. It does not measure keyboard traversal, screen-reader announcements, contrast, zoom/reflow, or real-device behavior; those remain required release evidence.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 

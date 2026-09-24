@@ -19,7 +19,20 @@ async function main(){
   let cookie='',csrf='';
   async function call(route,body){const response=await fetch(webOrigin+route,{method:body===undefined?'GET':'POST',headers:{cookie,origin:webOrigin,'content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};}
   const browserRoutes=['/','/account','/skin-match','/skin-match/results','/my-skin','/routine','/coach','/shop','/saved','/replenishment','/membership','/subscription','/orders','/support','/learn','/company','/trust','/privacy','/terms','/shipping','/partners','/studio','/studio/personal-color','/studio/makeup','/studio/haircare','/studio/hair-color','/studio/style','/studio/clothing','/admin'];
-  for(const route of browserRoutes){const response=await fetch(webOrigin+route);assert.equal(response.status,200,route);const html=await response.text();assert.match(html,/<html/);assert.match(html,/mgt-mark\.svg/,route+' shared logo');assert.match(html,/id="main"/,route+' main landmark');console.log('PASS production page '+route);}
+  for(const route of browserRoutes){
+   const response=await fetch(webOrigin+route);assert.equal(response.status,200,route);const html=await response.text();
+   assert.match(html,/<html/,route+' document');
+   assert.match(html,/mgt-mark\.svg/,route+' shared logo');
+   // This is a server-rendered accessibility markup contract. It deliberately
+   // checks every route, but does not claim a substitute for assistive-tech QA.
+   assert.match(html,/class="skip" href="#main"/,route+' skip link');
+   assert.match(html,/id="primary-navigation"/,route+' primary navigation');
+   assert.match(html,/aria-label="Primary"/,route+' primary navigation label');
+   assert.match(html,/id="main"/,route+' main landmark');
+   assert.match(html,/aria-label="Company and policies"/,route+' footer navigation label');
+   for(const image of html.match(/<img\b[^>]*>/g)||[])assert.match(image,/\balt="[^"]*"/,route+' image alternative text');
+   console.log('PASS production page '+route+' accessibility markup');
+  }
   assert.equal((await call('/api/hub/session')).status,200);
   assert.equal((await call('/api/v1/subscriptions')).status,401);
   assert.equal((await call('/api/hub/auth/verify',{email:'journey@test.invalid',code:'123456'})).status,200);await call('/api/hub/session');

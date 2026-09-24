@@ -1,6 +1,6 @@
 # MGT Skin Care — AI/LLM Infrastructure Migration v2
 
-**Version:** 2.1.8-planning
+**Version:** 2.1.9-planning
 **Revision date:** 2026-09-24
 **Status:** Canonical documentation for the verified repository branch  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
@@ -178,6 +178,8 @@ Assistant journey measurement is implemented with the same aggregate retention c
 The support lifecycle includes operator self-assignment and a controlled internal escalation reason selected from a short fixed list. Customer views and account exports exclude that reason and operator identity. Superadmin and compliance reporting exposes aggregate reason selections only. This improves local triage records but does not configure a helpdesk, name a support owner, deliver a message, or establish a service-level commitment.
 
 The shared navigation shell now places focus on the main landmark after an in-portal route change. Its mobile menu places focus on the first primary destination when opened, and Escape closes it and restores focus to Menu. This is a locally verified keyboard-navigation improvement; complete screen-reader, mobile-device, contrast and WCAG evidence remains outstanding.
+
+The production proxy journey additionally asserts the shared Skip to content link, primary-navigation identity and label, main landmark, labeled policy navigation, and alternative-text attributes on rendered images for all 29 portal routes. This local production-build contract prevents baseline markup regressions but does not substitute for assistive-technology, contrast, zoom/reflow, mobile-device, or WCAG validation.
 
 The first role-routing contract is locally implemented at commit `8444aa7`: `POST /api/hub/assistant` gives deterministic onboarding, support, account and payment handoffs, and sends signed-in, consented routine/product questions through the existing reviewed Coach path. Full local verification passed with evidence at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` adds a small Support-page guidance panel using the existing logo and layout; general onboarding and retailer directions were checked in the browser without an AI provider. API compilation, portal checks, web production build and 28-page proxy journey passed. Support delivery, OpenClaw runtime qualification, payment confirmation workflows and GTM execution remain planned. Production remains **NOT READY** because `infra/portal/.env` is absent and live data, provider, backup, container, catalog, and full accessibility gates remain open.
 

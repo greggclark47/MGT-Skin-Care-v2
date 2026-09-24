@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.8-planning
+**Version:** 2.1.9-planning
 **Revision date:** 2026-09-24
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -192,6 +192,8 @@ The assistant journey now has the same aggregate-only measurement boundary. Guid
 Support operations now include a controlled internal escalation reason and self-assignment on update. Only superadmin and compliance roles can select the fixed categories; the customer and data-export views exclude the reason and operator identity. The operator dashboard uses aggregate reason counts for queue awareness. It remains a local support record and does not imply a staffed service, external delivery or response-time promise.
 
 The shared portal shell now manages keyboard focus on navigation. In-portal route changes focus the main landmark, while opening the mobile menu focuses its first destination and Escape returns focus to Menu. This keeps the existing brand and route structure intact while improving local keyboard navigation. A complete device, screen-reader, contrast and WCAG audit remains open.
+
+The production proxy journey now also guards shared rendered accessibility markup across all 29 portal routes: a Skip to content link, primary-navigation identity and label, main landmark, labeled policy navigation, and alternative-text attributes for rendered images. The evidence is local and production-build based; it does not establish real keyboard traversal, announcement quality, contrast, zoom/reflow, device behavior, or WCAG conformance.
 
 The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 
