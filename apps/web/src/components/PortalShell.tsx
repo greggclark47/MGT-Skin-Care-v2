@@ -7,7 +7,7 @@ import {useHub} from '../lib/hub';
 type Theme='light'|'dark';
 export function PortalShell({children}:{children:React.ReactNode}){
  const saved=useHub('/saved-retailers');const savedCount=saved.data?.ids.length||0;
- const headerRef=useRef<HTMLElement>(null);
+ const headerRef=useRef<HTMLElement>(null),previousPath=useRef<string|undefined>(undefined);
  const path=usePathname(); const [theme,setTheme]=useState<Theme>('dark'); const [open,setOpen]=useState(false);
  useEffect(()=>{setTheme(document.documentElement.dataset.theme==='light'?'light':'dark');
  const media=matchMedia('(prefers-color-scheme: dark)');
@@ -16,9 +16,9 @@ export function PortalShell({children}:{children:React.ReactNode}){
  media.addEventListener('change',sync);window.addEventListener('storage',storage);
  return()=>{media.removeEventListener('change',sync);window.removeEventListener('storage',storage);};
  },[]);
- useEffect(()=>setOpen(false),[path]);
+ useEffect(()=>{setOpen(false);if(previousPath.current!==undefined&&previousPath.current!==path)window.requestAnimationFrame(()=>document.getElementById('main')?.focus());previousPath.current=path;},[path]);
  useEffect(()=>{const media=matchMedia('(min-width: 601px)');const reset=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',reset);return()=>media.removeEventListener('change',reset);},[]);
- useEffect(()=>{if(!open)return;const outside=(e:PointerEvent)=>{if(!headerRef.current?.contains(e.target as Node))setOpen(false);};const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);document.getElementById('menu-toggle')?.focus();}};window.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{window.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside);};},[open]);
+ useEffect(()=>{if(!open)return;window.requestAnimationFrame(()=>document.querySelector<HTMLElement>('#primary-navigation a')?.focus());const outside=(e:PointerEvent)=>{if(!headerRef.current?.contains(e.target as Node))setOpen(false);};const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);document.getElementById('menu-toggle')?.focus();}};window.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{window.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside);};},[open]);
  const toggle=()=>{const t=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;setTheme(t);try{localStorage.setItem('mgt-theme',t);}catch{}};
  const primary=[['/','Applications'],['/shop','Shop'],['/learn','Learn'],['/company','Company']];
  const appLinks=[['/skin-match','Skin Match'],['/routine','My Routine'],['/coach','Skin Coach'],['/my-skin','My Skin'],['/replenishment','Replenishment'],['/studio','Beauty & Style']];
