@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.29-planning
+**Version:** 2.1.30-planning
 **Revision date:** 2026-09-25
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -43,7 +43,7 @@ Non-goals for the current release:
 | Account and privacy | User can view profile state, export data, schedule/cancel deletion, and resolve guest merge choices | Local API/web regression coverage; live Supabase behavior pending |
 | Operations | Restricted roles inspect catalog health, AI economics, deletion queue, webhook receipts, and operator analysis | Local authorization and redaction coverage; first-superadmin provisioning and live services pending |
 
-The production web journey verifies 28 portal routes, the shared MGT mark (`mgt-mark.svg`), and the `main` landmark. Route names and layout are part of the current product contract.
+The production web journey verifies 29 portal routes, the shared MGT mark (`mgt-mark.svg`), and the `main` landmark. Route names and layout are part of the current product contract.
 
 ## 4. Platform architecture
 
@@ -121,11 +121,11 @@ These definitions keep dashboards economically useful without overstating accura
 | 3 | AI gateway, reviewed outputs, policy and schema controls | Complete locally; live providers pending |
 | 4 | Referral boundary, saved lists, replenishment alerts | Complete locally; catalog/agreements pending |
 | 5 | Edge, Compose, Dockerfile, immutable image and preflight contracts | Contract complete; Docker/hosting pending |
-| 6 | 28-route journey, shared branding, Expo/mobile/accessibility contracts | Contract complete; browser/device audit pending |
+| 6 | 29-route journey, shared branding, Expo/mobile/accessibility contracts | Contract complete; browser/device audit pending |
 | 7 | CI and release checkpoint | Complete locally; hosted CI after merge pending |
 | 8 | Analytics SDK and checkpoint integration | Complete locally |
 
-Latest evidence: `work/checkpoints/2026-09-23T00-08-34-590Z/report.md` and `work/verification/2026-09-23T00-08-39-783Z/report.md`. All seven local checkpoint gates passed. Production readiness remains **NOT READY** because `infra/portal/.env` is absent and live gates are open.
+Latest comprehensive local evidence: `work/verification/2026-09-25T16-34-14-942Z/report.md` and `work/checkpoints/2026-09-25T16-34-13-262Z/report.md`. It includes seven passing local checkpoint gates, the production web build, 29-route proxy journey, 70 HTTP/persistence/release-contract tests, focused operator render contracts and a zero-hit public artifact vendor scan. Production readiness remains **NOT READY** because `infra/portal/.env` is absent and live gates are open.
 
 ## 9. Test and readiness matrix
 
@@ -137,7 +137,7 @@ Latest evidence: `work/checkpoints/2026-09-23T00-08-34-590Z/report.md` and `work
 | Commerce boundary | Referral integration and blocked-commerce assertions | Approved retailer catalog, agreements, external destination review |
 | Operations | Readiness, webhook receipts, catalog health, AI economics | Backup restoration, worker scheduling, production alerting |
 | Deployment | Compose/Dockerfile/preflight contracts | Immutable image resolution, Docker startup, hosting and secrets |
-| UX/accessibility | 28-route proxy journey, logo/main landmark, mobile contract | Real browser, keyboard, WCAG, device, network/error-state audit |
+| UX/accessibility | 29-route proxy journey, logo/main landmark, mobile contract | Real browser, keyboard, WCAG, device, network/error-state audit |
 | Security/privacy | Server-side key boundary, origin/CSRF, roles, redaction | Penetration review, production secret rotation, RLS audit |
 
 ## 10. UX and brand invariants
@@ -204,6 +204,8 @@ Five more interaction phases are locally implemented: confirmation-dialog labeli
 Five account and subscription interaction phases are locally implemented: grouped membership selectors and associated status; opener-focus restoration for renewal confirmation; invitation busy/error and one-time-link feedback; Beauty & Style save/download feedback; and labeled, announced confirmed billing activity. These changes retain the existing trial, entitlement, signed-event, privacy and external-retailer boundaries. Live billing and identity services remain unverified.
 
 Five operator interaction phases are locally implemented: associated gated-action explanations, keyboard-reachable knowledge selection, keyboard-reachable ingredient-rule selection, connected operator-role form state, and connected advisory-analysis/reconciliation form state. Existing authorization, SME approval, provenance, audit, request-limit and spending-hold controls remain unchanged.
+
+Five support-operations phases are locally implemented: ticket-scoped busy/error/success state, visible status-aware reply rules, named ticket and customer-reply history with machine-readable times, semantic metric/table navigation, and clearer audit/draft evidence. The server remains authoritative for authorization, status and reply validation. The full local gate passed at `work/verification/2026-09-25T16-34-14-942Z/report.md`; support ownership, external delivery and deployed assistive-technology evidence remain open.
 
 The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 

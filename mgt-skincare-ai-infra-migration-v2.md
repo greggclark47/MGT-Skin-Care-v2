@@ -1,10 +1,10 @@
 # MGT Skin Care — AI/LLM Infrastructure Migration v2
 
-**Version:** 2.1.29-planning
+**Version:** 2.1.30-planning
 **Revision date:** 2026-09-25
 **Status:** Canonical documentation for the verified repository branch  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
-**Repository baseline:** `9e2d451`; current provisional plans/Stripe build is documented with its matching release checkpoint
+**Repository baseline:** `cea19fd`; current support-operations accessibility build is documented with its matching release checkpoint
 
 This document reconciles the existing Drive migration document with the current MGT Skin Care v2 repository, local release checkpoints, and the current product boundary. It is the implementation-oriented source of truth for migration planning. It does not change application code, credentials, infrastructure state, branding, routes, or user experience.
 
@@ -125,7 +125,7 @@ The API health endpoint is separate from production readiness. `/healthz` indica
 | 3 | AI/output controls | Reviewed five-case output set, gateway budgets, policy/schema checks | Locally verified; live providers pending |
 | 4 | Commercial/referral boundary | External storefront links, blocked commerce routes, vendor-safe payloads | Locally verified; agreements/catalog pending |
 | 5 | Deployment and edge | Caddy, Compose, immutable image contracts, readiness checks | Contract-verified; Docker/hosting pending |
-| 6 | Browser/mobile/accessibility | 28-route proxy journey, MGT mark/main landmark, Expo contract and tap targets | Locally verified; real-device/browser audit pending |
+| 6 | Browser/mobile/accessibility | 29-route proxy journey, MGT mark/main landmark, Expo contract and tap targets | Locally verified; real-device/browser audit pending |
 | 7 | Release controls | Secret-free CI and full local release gate | Locally verified; GitHub-hosted run after merge pending |
 | 8 | Analytics SDK | Package `0.2.0`, runtime validation, release checkpoint integration | Locally verified |
 
@@ -191,6 +191,8 @@ Five further repository-ready account and subscription phases are locally implem
 
 Five operator-facing repository phases are locally implemented: associated gated-action reasons, native keyboard selection for knowledge objects and ingredient rules, operator-role form state, and advisory-analysis/spending-reconciliation form state. Focused admin/web checks and the full local release gate passed at `work/verification/2026-09-25T15-39-47-034Z/report.md`. Authorization, SME approval, provenance, audit, cost and rate-limit boundaries are unchanged; live operator/provider and deployed accessibility evidence remain open.
 
+Five support-operations phases are also locally implemented. Each ticket has independent busy/error/success state; the customer-reply requirement is visible and enforced before the API call; request/reply history has named structure and machine-readable dates; operator metrics and tables expose semantic labels, captions, scoped headers and keyboard access; and audit/draft evidence carries clearer busy, error and time semantics. Focused render checks and every full local release gate passed at `work/verification/2026-09-25T16-34-14-942Z/report.md`; all seven local checkpoint gates passed at `work/checkpoints/2026-09-25T16-34-13-262Z/report.md`. Evidence includes 70 HTTP/persistence/release-contract tests, the production build, 29-route proxy journey and zero-hit public artifact vendor scan. This does not name a support owner, send an external message, validate a deployed identity provider or establish complete WCAG conformance.
+
 The first role-routing contract is locally implemented at commit `8444aa7`: `POST /api/hub/assistant` gives deterministic onboarding, support, account and payment handoffs, and sends signed-in, consented routine/product questions through the existing reviewed Coach path. Full local verification passed with evidence at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` adds a small Support-page guidance panel using the existing logo and layout; general onboarding and retailer directions were checked in the browser without an AI provider. API compilation, portal checks, web production build and 28-page proxy journey passed. Support delivery, OpenClaw runtime qualification, payment confirmation workflows and GTM execution remain planned. Production remains **NOT READY** because `infra/portal/.env` is absent and live data, provider, backup, container, catalog, and full accessibility gates remain open.
 
 Commit `08c9ca4` adds 18 engineering candidate policy cases across the four assistant roles, verifies deterministic requests do not call AI or payment providers, strengthens reaction/privacy/payment routing, and returns a Support handoff when reviewed knowledge or a verified answer is unavailable. The cases await SME and privacy-owner approval. Full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`; this does not establish production readiness.
@@ -203,6 +205,7 @@ Commit `f075a43` improves the existing Support guidance focus flow: new answers 
 - Analytics contract: `packages/analytics-sdk/src/index.ts`, `packages/analytics-sdk/package.json`
 - Portal scope: `CURRENT-SCOPE.md`, `infra/portal/README.md`
 - Provisional plan catalog and billing mapping: `apps/api/src/portal/plans.ts`, `apps/api/src/portal/billing.ts`, `apps/web/src/app/membership/page.tsx`
+- Support operations interface and render contracts: `apps/web/src/components/ConnectedAdmin.tsx`, `apps/web/src/__smoke__/admin-render.tsx`
 - Release evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `work/checkpoints/`, `work/verification/`
 - Readiness plan: `BUILD-READINESS-GUIDE.md`
 - Next implementation phase: `NEXT-PHASE-IMPLEMENTATION-PLAN.md`

@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { IngredientRulesConsole } from '../components/admin/IngredientRulesConsole';
 import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
+import { AuditTable, DataTable, MetricSummary, SupportTicketEditor } from '../components/ConnectedAdmin';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
 
 // These assert the admin console's SAFETY-RELEVANT claims, not its layout. Each check below
@@ -151,6 +152,41 @@ console.log('\n== 10. Zero approved objects reads as a grounding problem ==');
 {
   const html = renderKnowledge({ objects: [], selectedId: null });
   check('warns the assistant has nothing grounded', html.includes('no grounded material to cite'));
+}
+
+console.log('\n== 11. Support updates explain and enforce customer-visible replies ==');
+{
+  const baseTicket = {
+    id: 'support-1', subject: 'Account help', message: 'I need help.',
+    request_type: 'account_privacy', replies: [], created_at: '2026-09-25T12:00:00.000Z',
+  };
+  const open = renderToStaticMarkup(<SupportTicketEditor ticket={{ ...baseTicket, status: 'open' }} onSaved={() => {}}/>);
+  check('open requests require a reply', open.includes('required=""'));
+  check('reply rule is explained before submission', open.includes('A reply is required for Open'));
+  check('form exposes its busy state', open.includes('aria-busy="false"'));
+  check('submit button has an explicit type', open.includes('type="submit"'));
+
+  const review = renderToStaticMarkup(<SupportTicketEditor ticket={{ ...baseTicket, status: 'in_review' }} onSaved={() => {}}/>);
+  check('in-review requests allow an internal-only update', !review.includes('required=""'));
+  check('in-review placeholder explains reply is optional', review.includes('Optional while the request is under internal review.'));
+}
+
+console.log('\n== 12. Operator metrics and tables expose their structure ==');
+{
+  const metrics = renderToStaticMarkup(<MetricSummary label="Support totals" items={[["Open", 2], ["Resolved", 4]]}/>);
+  check('metrics use a named description list', metrics.includes('<dl') && metrics.includes('aria-label="Support totals"') && metrics.includes('<dt>Open</dt><dd>2</dd>'));
+
+  const table = renderToStaticMarkup(<DataTable label="Queue" caption="Current support queue"><thead><tr><th scope="col">Request</th></tr></thead><tbody><tr><th scope="row">One</th></tr></tbody></DataTable>);
+  check('wide table has a keyboard-focusable named region', table.includes('role="region"') && table.includes('aria-label="Queue"') && table.includes('tabindex="0"'));
+  check('table has a caption and scoped headers', table.includes('<caption class="sr-only">Current support queue</caption>') && table.includes('scope="col"') && table.includes('scope="row"'));
+}
+
+console.log('\n== 13. Audit evidence uses machine-readable dates ==');
+{
+  const audit = renderToStaticMarkup(<AuditTable entries={[{ id: 'a1', action: 'ticket.updated', at: '2026-09-25T12:00:00.000Z' }]}/>);
+  check('audit table names its evidence', audit.includes('The 20 most recent recorded portal actions'));
+  check('audit timestamp uses the original ISO value', audit.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
+  check('audit action is a row header', audit.includes('<th scope="row">ticket.updated</th>'));
 }
 
 console.log(failures === 0

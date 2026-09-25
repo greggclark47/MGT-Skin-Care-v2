@@ -9,29 +9,38 @@ fs.mkdirSync(outputDir,{recursive:true});
 const generatedNext=[path.join(root,'apps','web','.next'),path.join(root,'apps','web','.next-dev')];
 let generatedOutputCleaned=false;
 for(const outputPath of generatedNext){try{if(fs.existsSync(outputPath)){fs.rmSync(outputPath,{recursive:true,force:true});generatedOutputCleaned=true;}}catch(error){fs.writeFileSync(path.join(outputDir,'generated-output-cleanup.log'),String(error));}}
-const runner=process.platform==='win32'?'pnpm.cmd':'pnpm';
 const checks=[
- ['infrastructure preflight tests',['test:infra']],
- ['compose and image contracts',['test:compose-contract']],
- ['migration lineage contracts',['test:lineage']],
- ['reviewed output golden set',['test:golden']],
- ['analytics SDK contract',['test:analytics']],
- ['mobile contract gate',['test:mobile-contract']],
- ['full local verification',['test:verification']]
+ ['infrastructure preflight tests',[['',['--test','infra/portal/preflight.test.mjs']]]],
+ ['compose and image contracts',[['',['--test','infra/portal/compose-contract.test.mjs']]]],
+ ['migration lineage contracts',[['',['--test','infra/db/migration-lineage.test.mjs']]]],
+ ['reviewed output golden set',[
+  ['packages/domain',['node_modules/typescript/bin/tsc','-p','tsconfig.json']],
+  ['',['--test','packages/shared/test/golden-cases.cjs']]
+ ]],
+ ['analytics SDK contract',[
+  ['packages/analytics-sdk',['node_modules/typescript/bin/tsc','-p','tsconfig.json']],
+  ['packages/analytics-sdk',['dist/__smoke__/analytics.js']]
+ ]],
+ ['mobile contract gate',[['',['--test','apps/mobile/test/contract.cjs']]]],
+ ['full local verification',[['',['infra/portal/verify.cjs']]]]
 ];
 const results=[];
-for(const [name,args] of checks){
+for(const [name,commands] of checks){
  const safe=name.replace(/[^a-z0-9]+/gi,'-').toLowerCase();
- const run=spawnSync(runner,args,{cwd:root,encoding:'utf8',timeout:240000,windowsHide:true,shell:process.platform==='win32'});
- const output=(run.stdout||'')+(run.stderr||'');
+ let status=0,error,output='';
+ for(const [cwd,args] of commands){
+  const run=spawnSync(process.execPath,args,{cwd:path.join(root,cwd),encoding:'utf8',timeout:240000,windowsHide:true});
+  output+=`> ${process.execPath} ${args.join(' ')}\n`+(run.stdout||'')+(run.stderr||'');
+  if(run.status!==0||run.error){status=run.status??1;error=run.error?.message;break;}
+ }
  fs.writeFileSync(path.join(outputDir,safe+'.log'),output);
- results.push({name,status:run.status===0&&!run.error?'PASS':'FAIL',exit_code:run.status,error:run.error?.message,log:safe+'.log'});
+ results.push({name,status:status===0&&!error?'PASS':'FAIL',exit_code:status,error,log:safe+'.log'});
 }
 
 const envFile=path.join(root,'infra','portal','.env');
 let preflight={status:'BLOCKED',reason:'infra/portal/.env is not present; production configuration was not supplied.'};
 if(fs.existsSync(envFile)){
- const run=spawnSync(runner,['infra:preflight'],{cwd:root,encoding:'utf8',timeout:60000,windowsHide:true,shell:process.platform==='win32'});
+ const run=spawnSync(process.execPath,['--env-file-if-exists=infra/portal/.env','infra/portal/preflight.mjs'],{cwd:root,encoding:'utf8',timeout:60000,windowsHide:true});
  const output=(run.stdout||'')+(run.stderr||'');fs.writeFileSync(path.join(outputDir,'production-preflight.log'),output);
  preflight={status:run.status===0&&!run.error?'PASS':'FAIL',exit_code:run.status,error:run.error?.message,log:'production-preflight.log'};
 }

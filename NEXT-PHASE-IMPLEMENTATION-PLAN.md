@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 4.1
+**Version:** 4.2
 **Revision date:** 2026-09-25
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest portal, accessibility, and provisional subscription phases verified locally
-**Status:** Assistant and Support foundations, privacy-safe measurement, accessibility phases, and a provisional three-plan subscription/Stripe integration are locally implemented; production remains **NOT READY**.
+**Status:** Assistant and Support foundations, privacy-safe measurement, customer/operator accessibility phases, and a provisional three-plan subscription/Stripe integration are locally implemented; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -158,6 +158,18 @@ This checkpoint does not create prices, connect an account, collect a payment, f
 **Phase F20 — operator-access form checkpoint:** Operator lookup and role assignment expose busy/error relationships. A stale lookup error clears when the email changes; existing superadmin authorization, confirmation, concurrency and audit controls remain in force.
 
 **Phase F21 — operator AI and reconciliation checkpoint:** The advisory-analysis form and spending-hold reconciliation forms expose busy/error relationships. Analysis input clears stale errors when edited, and returned analysis is announced as status. Daily limits, consent, role checks, cost holds and manual provider-record verification remain unchanged.
+
+**Phase F22 — per-request support state checkpoint:** Every operator support form now owns its own busy, error and success state. Updating one request no longer disables unrelated requests, and duplicate submission is blocked only for the request being saved.
+
+**Phase F23 — support lifecycle guidance checkpoint:** The operator form explains the API lifecycle before submission and requires a customer-facing reply for Open, Waiting for customer and Resolved. In review remains the only state that can be saved without a reply; the API remains authoritative.
+
+**Phase F24 — support history semantics checkpoint:** Each request is programmatically connected to its heading, customer-visible replies are identified as such, empty reply history is explicit, and saved/updated/reply dates use machine-readable timestamps.
+
+**Phase F25 — operations data navigation checkpoint:** Readiness, support, referral, privacy, billing and AI sections expose loading state and named headings. Metric groups use description lists; horizontally scrollable tables are keyboard-focusable named regions with captions and scoped row/column headers.
+
+**Phase F26 — operator evidence and draft-state checkpoint:** Audit evidence uses a named table, scoped action rows and machine-readable dates. Knowledge/rule draft controls expose busy state, disable affected fields during a save, clear stale errors when edited and use explicit button types.
+
+**F22–F26 verification:** Focused render checks and every full local release gate passed at `work/verification/2026-09-25T16-34-14-942Z/report.md`; the seven-gate local checkpoint passed at `work/checkpoints/2026-09-25T16-34-13-262Z/report.md`. Evidence includes 70 HTTP/persistence/release-contract tests, the production web build, 29-route proxy journey and zero-hit public artifact vendor scan. These checks preserve authorization and API enforcement; deployed keyboard, screen-reader, browser/device and complete WCAG evidence remain required.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
