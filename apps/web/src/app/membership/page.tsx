@@ -66,27 +66,27 @@ export default function Membership() {
   return <AppFrame title="Plans & Billing">
     <p className="lead">Subscriptions for personal care and vendor participation.</p>
     <p>Plan benefits and prices are being finalized. Retail purchases remain with external retailers.</p>
-    <div className="filters" aria-label="Subscription audience">
-      {['consumer', 'vendor'].map(item => <button key={item} disabled={busy} aria-pressed={audience === item} onClick={() => { setAudience(item); setConsent(false); setError(''); }}>
+    <fieldset className="filters flow-fieldset" disabled={busy} aria-describedby={error ? 'membership-error' : undefined}><legend className="sr-only">Subscription audience</legend>
+      {['consumer', 'vendor'].map(item => <button type="button" key={item} aria-pressed={audience === item} onClick={() => { setAudience(item); setConsent(false); setError(''); }}>
         {item === 'consumer' ? 'Consumer plans' : 'Vendor plans'}
       </button>)}
-    </div>
-    <div className="filters" aria-label="Billing cycle">
-      {['monthly', 'annual'].map(item => <button key={item} disabled={busy} aria-pressed={cycle === item} onClick={() => { setCycle(item); setConsent(false); setNotice(''); }}>
+    </fieldset>
+    <fieldset className="filters flow-fieldset" disabled={busy} aria-describedby={error ? 'membership-error' : undefined}><legend className="sr-only">Billing cycle</legend>
+      {['monthly', 'annual'].map(item => <button type="button" key={item} aria-pressed={cycle === item} onClick={() => { setCycle(item); setConsent(false); setNotice(''); setError(''); }}>
         {item === 'monthly' ? 'Monthly' : 'Annual'}
       </button>)}
-    </div>
+    </fieldset>
     <p className="notice">Start with a 14-day trial. Add your payment method now; subscription billing starts when the trial ends. Cancel before then to avoid the first subscription charge. Returning subscribers who have already used a trial are billed without a new trial.</p>
     {notice && <p className="notice success" role="status">{notice}</p>}
     <LoadState {...state} retry={state.reload} />
-    {error && <p className="notice error" role="alert">{error}</p>}
-    {data && <section className="panel">
+    {error && <p id="membership-error" className="notice error" role="alert">{error}</p>}
+    {data && <section className="panel" aria-busy={busy} aria-describedby={error ? 'membership-error' : undefined}>
       <span className="eyebrow">{audience.toUpperCase()} SUBSCRIPTION</span>
       <h2>{data.plan ? new Intl.NumberFormat(undefined, { style: 'currency', currency: data.plan.currency }).format(data.plan.amount / 100) + ' ' + data.plan.currency.toUpperCase() + (data.plan.interval === 'year' ? ' billed annually' : ' billed monthly') : 'Pricing TBD'}</h2>
       {data.subscription?.trial_end && <p>Trial ends: {new Date(data.subscription.trial_end * 1000).toLocaleString()}</p>}
       {data.subscription?.current_period_end && <p>{data.subscription.cancel_at_period_end ? 'Service ends' : 'Current period ends'}: {new Date(data.subscription.current_period_end * 1000).toLocaleString()}</p>}
       <p>Cancellation takes effect at the end of the current billing period. Paid plan changes may incur prorated charges; review them in the billing service before confirming.</p>
-      {data.subscription && <p>Status: <strong>{({ trialing: 'Trial active', active: 'Active', past_due: 'Payment overdue', unpaid: 'Payment required', canceled: 'Ended', incomplete: 'Payment incomplete', incomplete_expired: 'Signup expired', paused: 'Paused' } as Record<string, string>)[data.subscription.status] || data.subscription.status}</strong>{data.subscription.cancel_at_period_end ? ' · Cancels at period end' : ''}</p>}
+      {data.subscription && <p role="status" aria-live="polite" aria-atomic="true">Status: <strong>{({ trialing: 'Trial active', active: 'Active', past_due: 'Payment overdue', unpaid: 'Payment required', canceled: 'Ended', incomplete: 'Payment incomplete', incomplete_expired: 'Signup expired', paused: 'Paused' } as Record<string, string>)[data.subscription.status] || data.subscription.status}</strong>{data.subscription.cancel_at_period_end ? ' · Cancels at period end' : ''}</p>}
       {['past_due', 'unpaid', 'incomplete'].includes(data.subscription?.status) && <p className="notice error">Your subscription needs payment attention. Use Manage billing to review your payment details.</p>}
       {data.subscription?.cancel_at_period_end && <p className="notice">Renewal is turned off. Service continues until the end date shown above.</p>}
       {!data.configured && <p className="notice">Payment setup is not active. No subscription can be purchased yet.</p>}

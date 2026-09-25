@@ -46,6 +46,8 @@ The shared shell also maintains route-specific browser titles, politely announce
 
 Shared confirmation dialogs restore opener focus and expose their title, description and busy state. Retailer comparisons, Shop filters, reviewed-library search and Replenishment totals now connect their controls and politely announced status text. These improvements do not alter retailer ranking, catalog content, reminders, purchases or commercial boundaries.
 
+Membership selectors, renewal confirmations, guest invitations, the shared Beauty & Style profile and confirmed billing activity now expose clearer grouping, busy/error relationships, status announcements and focus return. Subscription status continues to depend on authoritative signed events; portal activity is not a payment receipt.
+
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text

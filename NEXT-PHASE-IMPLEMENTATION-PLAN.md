@@ -1,6 +1,6 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 3.0
+**Version:** 3.5
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
 **Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
@@ -128,6 +128,16 @@ Required implementation controls if subscription confirmations are approved: one
 **Phase F10 — reviewed-library search checkpoint:** The reviewed-library search identifies its result collection and live result count. Source links, review status, content and empty states are unchanged.
 
 **Phase F11 — Replenishment feedback checkpoint:** The reminder form exposes busy and associated error states, clears stale errors when values change, and announces planned and due totals. Reminder actions remain planning records and cannot purchase a product.
+
+**Phase F12 — membership selector checkpoint:** Subscription audience and billing-cycle choices are grouped with programmatic legends. Billing actions expose busy/error relationships, and confirmed subscription status is announced without treating a browser return as payment confirmation.
+
+**Phase F13 — renewal confirmation focus checkpoint:** The subscription workspace remembers the renewal control that opened its inline confirmation. Back or a completed request returns focus to that control when it remains available, otherwise to Refresh status. Confirmation help, busy state and errors are programmatically associated.
+
+**Phase F14 — invited-access feedback checkpoint:** Guest invitation creation and acceptance expose busy/error relationships. Invalid email state clears when edited, and a newly created one-time invitation link is announced. Profile, billing and administration isolation remain unchanged.
+
+**Phase F15 — Beauty & Style feedback checkpoint:** The shared style-profile form exposes busy/error relationships, clears stale save errors when a preference changes, and confirms complete-plan downloads. The plan remains deterministic and preference-based; no photo analysis, live AI assessment or shade verification is introduced.
+
+**Phase F16 — billing activity checkpoint:** The confirmed subscription-activity region exposes its heading and loading state, announces the number of confirmed updates, and prevents duplicate refresh actions while loading. It remains a status history rather than a receipt or invoice.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
