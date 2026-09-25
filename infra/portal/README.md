@@ -48,6 +48,8 @@ Shared confirmation dialogs restore opener focus and expose their title, descrip
 
 Membership selectors, renewal confirmations, guest invitations, the shared Beauty & Style profile and confirmed billing activity now expose clearer grouping, busy/error relationships, status announcements and focus return. Subscription status continues to depend on authoritative signed events; portal activity is not a payment receipt.
 
+Operator controls now associate gated-action reasons, use keyboard-reachable pressed buttons for knowledge and ingredient-rule selection, connect role-management and AI/reconciliation forms to their busy/error state, and announce advisory analysis results. Authorization, approval, audit and cost controls are unchanged.
+
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text

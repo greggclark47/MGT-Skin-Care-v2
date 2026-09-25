@@ -84,25 +84,25 @@ export function KnowledgeConsole(props: KnowledgeConsoleProps) {
             {objects.map((o, i) => (
               <li
                 key={o.id}
-                onClick={() => onSelect(o.id)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: space.md, cursor: 'pointer',
                   padding: space.md, borderTop: i === 0 ? 'none' : `1px solid ${color.border}`,
                   background: o.id === selectedId ? color.accentSubtle : 'transparent',
                   borderRadius: o.id === selectedId ? radius.sm : 0,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: font.size.md,
-                    fontWeight: o.id === selectedId ? font.weight.semibold : font.weight.regular,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{o.title}</div>
-                  <div style={{ fontSize: font.size.xs, color: color.textFaint }}>
-                    {o.id} · v{o.version} · {o.evidence_level}
+                <button type="button" aria-pressed={o.id === selectedId} onClick={() => onSelect(o.id)} style={{display:'flex',alignItems:'center',gap:space.md,width:'100%',padding:0,border:0,background:'transparent',color:color.text,textAlign:'left',cursor:'pointer',fontFamily:font.family}}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: font.size.md,
+                      fontWeight: o.id === selectedId ? font.weight.semibold : font.weight.regular,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{o.title}</div>
+                    <div style={{ fontSize: font.size.xs, color: color.textFaint }}>
+                      {o.id} · v{o.version} · {o.evidence_level}
+                    </div>
                   </div>
-                </div>
-                <StatusPill status={o.status} />
+                  <StatusPill status={o.status} />
+                </button>
               </li>
             ))}
           </ul>

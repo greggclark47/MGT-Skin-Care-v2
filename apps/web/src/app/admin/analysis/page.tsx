@@ -24,13 +24,13 @@ function BudgetReservations({canReconcile}:{canReconcile:boolean}){
  return <section className="panel"><h2>Unresolved AI spending holds</h2>
   <p className="muted">Only holds older than {holds.data?.minimum_age_minutes??10} minutes appear. Compare each with the service billing record before entering an actual cost. Unknown charges continue to count against the daily allowance.</p>
   <LoadState {...holds} retry={holds.reload}/>
-  {error&&<p role="alert" className="notice error">{error}</p>}
+  {error&&<p id="reservation-error" role="alert" className="notice error">{error}</p>}
   {message&&<p role="status" className="notice success">{message}</p>}
   {holds.data?.pending?.length===0&&<p>No older pending holds.</p>}
   {holds.data?.pending?.map((hold:any)=><article key={hold.id} className="panel">
    <h3>Reservation {hold.id}</h3>
    <p>Account and budget: {hold.budget_key}<br/>Reserved: ${(Number(hold.reserved_cents)/100).toFixed(4)} · Created: {new Date(hold.created_at).toLocaleString()}</p>
-   {canReconcile&&<form className="stack" onSubmit={event=>void reconcile(event,hold.id)}>
+   {canReconcile&&<form className="stack" aria-busy={busyId===hold.id} aria-describedby={error?'reservation-error':undefined} onSubmit={event=>void reconcile(event,hold.id)}>
     <label className="field">Verified service cost in cents<input name="actual_cents" type="number" min="0" step="0.000001" required/></label>
     <label className="field">Billing reference<input name="billing_reference" required minLength={8} maxLength={200}/></label>
     <label className="check-label"><input name="confirmed_no_charge" type="checkbox"/> Provider confirms there was no charge (required when cost is zero)</label>
@@ -63,14 +63,14 @@ export default function AnalysisPage(){
   <p>For authorized operators to review complex portal operations questions. Responses are advisory and do not change the portal.</p>
   <LoadState {...admin} retry={admin.reload}/>
   {admin.data&&!allowed&&<p role="alert" className="notice error">Your account cannot use this tool.</p>}
-  {allowed&&<form className="panel stack" onSubmit={submit}>
-   <label className="field">Operational question<textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={1200} required/></label>
-   <p className="muted">Do not include customer details, medical information, passwords, or access credentials. Complex analysis is limited to three requests per day.</p>
+  {allowed&&<form className="panel stack" aria-busy={busy} aria-describedby={error?'analysis-error':'analysis-help'} onSubmit={submit}>
+   <label className="field">Operational question<textarea value={question} aria-invalid={!!error} aria-describedby={error?'analysis-help analysis-error':'analysis-help'} onChange={event=>{setQuestion(event.target.value);if(error)setError('');}} maxLength={1200} required/></label>
+   <p id="analysis-help" className="muted">Do not include customer details, medical information, passwords, or access credentials. Complex analysis is limited to three requests per day.</p>
    <label className="check-label"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)}/> I allow this question to be processed by the platform analysis service.</label>
    <button className="button primary" disabled={busy||!consent}>{busy?'Analyzing…':'Analyze question'}</button>
   </form>}
-  {error&&<p role="alert" className="notice error">{error}</p>}
-  {result&&<section className="panel" aria-live="polite"><h2>Analysis</h2><p>{result.analysis?.analysis}</p>
+  {error&&<p id="analysis-error" role="alert" className="notice error">{error}</p>}
+  {result&&<section className="panel" role="status" aria-live="polite"><h2>Analysis</h2><p>{result.analysis?.analysis}</p>
    <h3>Risks</h3><ul>{result.analysis?.risks?.map((item:string,index:number)=><li key={index}>{item}</li>)}</ul>
    <h3>Recommendations</h3><ul>{result.analysis?.recommendations?.map((item:string,index:number)=><li key={index}>{item}</li>)}</ul>
    <p className="muted">Estimated usage cost: ${(Number(result.cost_cents)/100).toFixed(4)}</p>

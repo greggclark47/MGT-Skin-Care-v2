@@ -128,16 +128,16 @@ export function IngredientRulesConsole(props: IngredientRulesConsoleProps) {
                 return (
                   <tr
                     key={r.ingredient_key}
-                    onClick={() => onSelect(r.ingredient_key)}
                     style={{
-                      cursor: 'pointer',
                       background: selected ? color.accentSubtle : 'transparent',
                       borderTop: `1px solid ${color.border}`,
                     }}
                   >
-                    <td style={{ padding: space.sm, fontWeight: selected ? font.weight.semibold : font.weight.regular }}>
-                      {r.display_name}
-                      <div style={{ fontSize: font.size.xs, color: color.textFaint }}>{r.ingredient_key}</div>
+                    <td style={{ padding: space.sm }}>
+                      <button type="button" aria-pressed={selected} onClick={() => onSelect(r.ingredient_key)} style={{display:'block',width:'100%',padding:0,border:0,background:'transparent',color:color.text,textAlign:'left',cursor:'pointer',fontFamily:font.family,fontWeight:selected?font.weight.semibold:font.weight.regular}}>
+                        {r.display_name}
+                        <span style={{ display:'block',fontSize: font.size.xs, color: color.textFaint }}>{r.ingredient_key}</span>
+                      </button>
                     </td>
                     <td style={{ padding: space.sm }}><code>{threshold(r.sensitivity_ceiling_required)}</code></td>
                     <td style={{ padding: space.sm, color: r.triggers_avoid_flag ? color.caution : color.textFaint }}>

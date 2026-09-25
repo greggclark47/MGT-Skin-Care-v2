@@ -45,13 +45,13 @@ export default function OperatorsPage(){
   <LoadState {...session} retry={session.reload}/>
   {session.data&&!allowed&&<p role="alert" className="notice error">Only a superadmin can manage operator access.</p>}
   {allowed&&<>
-   <form className="panel stack" onSubmit={event=>void lookup(event)}><h2>Find an existing account</h2>
-    <label className="field">Exact account email<input type="email" value={email} maxLength={254} required onChange={event=>{setEmail(event.target.value);setTarget(null);setConfirm(false);setMessage('');}}/></label>
+   <form className="panel stack" aria-busy={busy} aria-describedby={error?'operator-error':undefined} onSubmit={event=>void lookup(event)}><h2>Find an existing account</h2>
+    <label className="field">Exact account email<input type="email" value={email} maxLength={254} required aria-invalid={!!error&&!target} onChange={event=>{setEmail(event.target.value);setTarget(null);setConfirm(false);setMessage('');if(error)setError('');}}/></label>
     <button className="button primary" disabled={busy}>{busy?'Checking…':'Find account'}</button>
    </form>
-   {error&&<p role="alert" className="notice error">{error}</p>}
+   {error&&<p id="operator-error" role="alert" className="notice error">{error}</p>}
    {message&&<p role="status" className="notice success">{message}</p>}
-   {target&&<form className="panel stack" onSubmit={event=>void save(event)}><h2>Roles for {target.email}</h2>
+   {target&&<form className="panel stack" aria-busy={busy} aria-describedby={error?'operator-error':undefined} onSubmit={event=>void save(event)}><h2>Roles for {target.email}</h2>
     <p className="muted">Account ID: {target.id}</p>
     {roles.map(role=><label className="check-label" key={role.id}><input type="checkbox" checked={selected.includes(role.id)} onChange={()=>toggle(role.id)}/><span><strong>{role.label}</strong><br/>{role.detail}</span></label>)}
     <label className="check-label"><input type="checkbox" checked={confirm} onChange={event=>setConfirm(event.target.checked)}/> I verified this account and approve these role changes.</label>

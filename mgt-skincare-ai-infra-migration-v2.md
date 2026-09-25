@@ -1,6 +1,6 @@
 # MGT Skin Care — AI/LLM Infrastructure Migration v2
 
-**Version:** 2.1.23-planning
+**Version:** 2.1.28-planning
 **Revision date:** 2026-09-24
 **Status:** Canonical documentation for the verified repository branch  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
@@ -188,6 +188,8 @@ The next three repository-ready accessibility phases are also locally implemente
 Five subsequent repository-ready interaction phases are locally implemented: shared modal labeling and focus restoration, announced retailer-shortlist state, linked Shop filter/results feedback, linked reviewed-library search/results feedback, and Replenishment busy/error/total status. Focused web checks and the full local release gate passed at `work/verification/2026-09-25T00-54-25-023Z/report.md`. They do not change retailer ranking, knowledge content, purchasing, payments, reminders, branding or layout, and deployed assistive-technology evidence remains open.
 
 Five further repository-ready account and subscription phases are locally implemented: programmatically grouped membership choices, renewal-confirmation focus restoration, invited-access form and one-time-link feedback, shared Beauty & Style save/download feedback, and confirmed billing-activity status. Focused web checks and the full local release gate passed at `work/verification/2026-09-25T01-01-25-696Z/report.md`. Trial, entitlement, privacy, signed-event, retailer and payment-receipt boundaries are unchanged; live services and deployed accessibility evidence remain open.
+
+Five operator-facing repository phases are locally implemented: associated gated-action reasons, native keyboard selection for knowledge objects and ingredient rules, operator-role form state, and advisory-analysis/spending-reconciliation form state. Focused admin/web checks and the full local release gate passed at `work/verification/2026-09-25T15-39-47-034Z/report.md`. Authorization, SME approval, provenance, audit, cost and rate-limit boundaries are unchanged; live operator/provider and deployed accessibility evidence remain open.
 
 The first role-routing contract is locally implemented at commit `8444aa7`: `POST /api/hub/assistant` gives deterministic onboarding, support, account and payment handoffs, and sends signed-in, consented routine/product questions through the existing reviewed Coach path. Full local verification passed with evidence at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` adds a small Support-page guidance panel using the existing logo and layout; general onboarding and retailer directions were checked in the browser without an AI provider. API compilation, portal checks, web production build and 28-page proxy journey passed. Support delivery, OpenClaw runtime qualification, payment confirmation workflows and GTM execution remain planned. Production remains **NOT READY** because `infra/portal/.env` is absent and live data, provider, backup, container, catalog, and full accessibility gates remain open.
 

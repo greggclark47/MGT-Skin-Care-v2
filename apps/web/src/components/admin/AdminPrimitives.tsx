@@ -71,6 +71,7 @@ export function GatedButton({ label, onClick, disabledReason, variant = 'primary
   busy?: boolean;
 }) {
   const disabled = Boolean(disabledReason) || Boolean(busy);
+  const reasonId = React.useId();
   const palette = {
     primary:   { bg: color.accent, fg: '#FFFFFF', border: color.accent },
     secondary: { bg: color.bg,     fg: color.text, border: color.border },
@@ -78,12 +79,13 @@ export function GatedButton({ label, onClick, disabledReason, variant = 'primary
   }[variant];
 
   return (
-    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: space.xs }}>
+    <span aria-busy={Boolean(busy)} style={{ display: 'inline-flex', flexDirection: 'column', gap: space.xs }}>
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
         title={disabledReason ?? undefined}
+        aria-describedby={disabledReason ? reasonId : undefined}
         style={{
           minHeight: TAP_TARGET_MIN, padding: `0 ${space.lg}px`, borderRadius: radius.sm,
           fontSize: font.size.sm, fontWeight: font.weight.semibold, fontFamily: font.family,
@@ -94,7 +96,7 @@ export function GatedButton({ label, onClick, disabledReason, variant = 'primary
         }}
       >{busy ? 'Working…' : label}</button>
       {disabledReason && (
-        <span style={{ fontSize: font.size.xs, color: color.textMuted, maxWidth: 260 }}>{disabledReason}</span>
+        <span id={reasonId} style={{ fontSize: font.size.xs, color: color.textMuted, maxWidth: 260 }}>{disabledReason}</span>
       )}
     </span>
   );

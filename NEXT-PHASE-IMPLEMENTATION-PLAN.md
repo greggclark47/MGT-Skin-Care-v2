@@ -1,6 +1,6 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 3.5
+**Version:** 4.0
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
 **Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
@@ -138,6 +138,16 @@ Required implementation controls if subscription confirmations are approved: one
 **Phase F15 — Beauty & Style feedback checkpoint:** The shared style-profile form exposes busy/error relationships, clears stale save errors when a preference changes, and confirms complete-plan downloads. The plan remains deterministic and preference-based; no photo analysis, live AI assessment or shade verification is introduced.
 
 **Phase F16 — billing activity checkpoint:** The confirmed subscription-activity region exposes its heading and loading state, announces the number of confirmed updates, and prevents duplicate refresh actions while loading. It remains a status history rather than a receipt or invoice.
+
+**Phase F17 — gated-action explanation checkpoint:** Shared operator action controls now programmatically associate each disabled reason with its button and expose their busy state. Separation-of-duties explanations remain visible and are available to assistive technology.
+
+**Phase F18 — knowledge-selection checkpoint:** Knowledge objects are selected with native buttons that expose pressed state. Keyboard operators can reach and select every object without relying on a pointer; approval, provenance and retrieval rules are unchanged.
+
+**Phase F19 — ingredient-rule selection checkpoint:** Each safety-rule row now provides a native selection button with pressed state. The live-versus-draft matrix, SME approval boundary and fail-closed scoring behavior remain unchanged.
+
+**Phase F20 — operator-access form checkpoint:** Operator lookup and role assignment expose busy/error relationships. A stale lookup error clears when the email changes; existing superadmin authorization, confirmation, concurrency and audit controls remain in force.
+
+**Phase F21 — operator AI and reconciliation checkpoint:** The advisory-analysis form and spending-hold reconciliation forms expose busy/error relationships. Analysis input clears stale errors when edited, and returned analysis is announced as status. Daily limits, consent, role checks, cost holds and manual provider-record verification remain unchanged.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
