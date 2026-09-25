@@ -40,6 +40,8 @@ The portal uses one shared gateway. Ollama is the default runtime for high-frequ
 
 The shared portal shell preserves the Skip to content link and moves keyboard focus to the main landmark after in-portal navigation. Opening the mobile menu focuses its first primary destination; Escape closes it and returns focus to Menu. The production proxy journey also verifies the Skip link, labeled primary and policy navigation, main landmark, and image alternative-text attributes on every portal route. These are local accessibility safeguards, not substitutes for a full assistive-technology or WCAG audit.
 
+`node infra/portal/accessibility-theme-contract.cjs` calculates WCAG contrast for the declared normal-text theme-token pairs, requiring 4.5:1 in both themes, and protects the reduced-motion, forced-color, and visible-focus rules. It is included in `node infra/portal/verify.cjs`. Component-state, image, zoom/reflow, browser, and assistive-technology review remain separate release evidence.
+
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text

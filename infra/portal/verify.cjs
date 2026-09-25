@@ -25,6 +25,7 @@ await run('domain deterministic pipeline','packages/domain',['dist/__smoke__/pip
 for(const name of ['gateway','pricing'])await run('gateway '+name,'packages/ai-gateway',['dist/__smoke__/'+name+'.js']);
 const tests=['apps/api/test','packages/shared/test','apps/mobile/test'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).filter(f=>f.endsWith('.cjs')).map(f=>dir+'/'+f));
 await run('HTTP, persistence, and release-contract regressions','',['--test','--test-concurrency=1','--test-reporter=tap',...tests,'infra/portal/preflight.test.mjs','infra/portal/compose-contract.test.mjs','infra/portal/ci-contract.test.mjs','infra/db/migration-lineage.test.mjs']);
+await run('accessibility theme contract','',['infra/portal/accessibility-theme-contract.cjs']);
 // Build uses only the server-side local API origin already in next.config.js; no service secrets.
 const webBuilt=await run('web production build','apps/web',['node_modules/next/dist/bin/next','build']);
 if(webBuilt)await run('production web proxy journey','',['infra/portal/production-journey.cjs']);
