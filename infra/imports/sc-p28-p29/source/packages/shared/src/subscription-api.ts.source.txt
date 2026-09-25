@@ -1,0 +1,161 @@
+// packages/shared/src/subscription-api.ts — SC-P29
+//
+// Client for the SC-P28 /api/v1/subscriptions surface. Follows the conventions the
+// existing clients already established and that the SC-P15 client-shape smoke suite
+// asserts: base URL plus an INJECTABLE fetch as the second constructor argument, ids
+// encodeURIComponent'd into the path rather than interpolated raw, and a REJECT on any
+// non-2xx rather than resolving with error JSON that reads falsy-successful.
+//
+// Difference from EntitlementApi worth stating: EntitlementApi takes the owner id as a
+// route param (`/api/entitlement/:userId`). The subscriptions router instead resolves
+// the user from the request itself, so the id travels as a header here. That is not an
+// inconsistency to tidy up later — entitlement is readable for an anonymous owner id,
+// whereas a subscription is account-scoped and must never be addressable by putting
+// someone else's id in a URL.
+//
+// [UNVERIFIED] `x-user-id` is the header the SC-P28 `headerUserResolver` reads, and it
+// requires ALLOW_HEADER_USER_ID=true on the server. That resolver is a dev seam, not
+// auth. When real consumer auth lands, this client should send whatever that scheme
+// uses (a bearer token, most likely) and `userId` here becomes unnecessary.
+
+export type BillingProvider = 'stripe' | 'revenuecat';
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete'
+  | 'unpaid';
+
+export interface PublicSubscription {
+  id: string;
+  provider: BillingProvider;
+  status: SubscriptionStatus;
+  current_period_end: string;
+  price_id: string | null;
+  cancel_at_period_end: boolean;
+  platform_managed: boolean;
+  created_at: string;
+}
+
+export interface Entitlement {
+  premium: boolean;
+  source: BillingProvider | null;
+  valid_until: string | null;
+}
+
+export interface SubscriptionListResponse {
+  subscriptions: PublicSubscription[];
+  entitlement: Entitlement;
+}
+
+export interface CheckoutHandle {
+  id: string;
+  url: string | null;
+  client_secret: string | null;
+}
+
+/** Thrown on any non-2xx. Carries the v1 envelope's code so callers can branch on
+ *  `platform_managed` without string-matching a message. */
+export class SubscriptionApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly manageUrls: { ios: string; android: string } | null;
+
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    manageUrls: { ios: string; android: string } | null = null,
+  ) {
+    super(message);
+    this.name = 'SubscriptionApiError';
+    this.status = status;
+    this.code = code;
+    this.manageUrls = manageUrls;
+  }
+}
+
+type FetchLike = typeof fetch;
+
+export class SubscriptionApi {
+  constructor(
+    private baseUrl: string,
+    private fetchImpl: FetchLike = fetch,
+    private userId: string | null = null,
+  ) {}
+
+  /** Returns a copy bound to a user id, so a page can construct the client once at
+   *  module scope (as /shop does) and bind identity after it resolves. */
+  withUser(userId: string): SubscriptionApi {
+    return new SubscriptionApi(this.baseUrl, this.fetchImpl, userId);
+  }
+
+  async list(): Promise<SubscriptionListResponse> {
+    return this.request<SubscriptionListResponse>('GET', '');
+  }
+
+  async get(subscriptionId: string): Promise<{ subscription: PublicSubscription }> {
+    return this.request<{ subscription: PublicSubscription }>(
+      'GET',
+      `/${encodeURIComponent(subscriptionId)}`,
+    );
+  }
+
+  async startCheckout(priceId: string, subscriptionId?: string): Promise<{
+    checkout: CheckoutHandle;
+    status: string;
+  }> {
+    return this.request('POST', '', {
+      price_id: priceId,
+      ...(subscriptionId ? { subscription_id: subscriptionId } : {}),
+    });
+  }
+
+  async changePlan(subscriptionId: string, priceId: string): Promise<{ status: string }> {
+    return this.request('PUT', `/${encodeURIComponent(subscriptionId)}`, { price_id: priceId });
+  }
+
+  async cancel(
+    subscriptionId: string,
+    cancelAtPeriodEnd = true,
+  ): Promise<{ subscription: PublicSubscription; access_until: string }> {
+    return this.request('DELETE', `/${encodeURIComponent(subscriptionId)}`, {
+      cancel_at_period_end: cancelAtPeriodEnd,
+    });
+  }
+
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (this.userId) headers['x-user-id'] = this.userId;
+
+    const res = await this.fetchImpl(`${this.baseUrl}/api/v1/subscriptions${path}`, {
+      method,
+      headers,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+
+    // Parse before checking ok: the error body is where the useful part lives, and a
+    // body that fails to parse must not mask the real status code.
+    let parsed: unknown = null;
+    try {
+      parsed = await res.json();
+    } catch {
+      parsed = null;
+    }
+
+    if (!res.ok) {
+      const envelope = (parsed as { error?: Record<string, unknown> } | null)?.error;
+      throw new SubscriptionApiError(
+        res.status,
+        typeof envelope?.code === 'string' ? envelope.code : 'unknown_error',
+        typeof envelope?.message === 'string' ? envelope.message : `Request failed (${res.status}).`,
+        (envelope?.manage_urls as { ios: string; android: string } | undefined) ?? null,
+      );
+    }
+
+    return parsed as T;
+  }
+}

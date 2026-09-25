@@ -1,0 +1,122 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:?Set the approved Ollama image digest}
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-2}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    logging: *default-logging
+  model-sync:
+    image: ${OLLAMA_IMAGE:?Set the approved Ollama image digest}
+    profiles: ["model-sync"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL_PRIMARY: ${OLLAMA_MODEL_PRIMARY:-llama3.2:3b}
+      OLLAMA_MODEL_REASONING: ${OLLAMA_MODEL_REASONING:-deepseek-r1:8b}
+      OLLAMA_MODEL_EMBEDDING: ${OLLAMA_MODEL_EMBEDDING:-nomic-embed-text}
+    command: ["sh", "-c", "set -eu; ollama pull \"$OLLAMA_MODEL_PRIMARY\"; ollama pull \"$OLLAMA_MODEL_REASONING\"; ollama pull \"$OLLAMA_MODEL_EMBEDDING\""]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    logging: *default-logging
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.api
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:?Set the approved Node image digest}
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      DATABASE_URL: ${DATABASE_URL:?Set the reviewed Supabase database connection}
+      PORTAL_AUTO_MIGRATE: "false"
+      OLLAMA_ENABLED: "true"
+      OLLAMA_BASE_URL: http://ollama:11434
+      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:-false}
+      OPENCLAW_BASE_URL: http://ollama:11434
+      OPENCLAW_API_MODE: ollama
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging: *default-logging
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.api
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:?Set the approved Node image digest}
+    command: ["node", "dist/portal/worker.js"]
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set the reviewed Supabase database connection}
+      PORTAL_AUTO_MIGRATE: "false"
+      WORKER_INTERVAL_SECONDS: "60"
+      PROCESS_ROLE: worker
+      WORKER_HEALTH_FILE: /tmp/mgt-worker-health.json
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    logging: *default-logging
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.web
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:?Set the approved Node image digest}
+        PORTAL_API_ORIGIN: http://api:3100
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging: *default-logging
+  edge:
+    image: ${CADDY_IMAGE:?Set the approved Caddy image digest}
+    ports: ["80:80", "443:443"]
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set portal domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging: *default-logging
+volumes:
+  certificates:
+  caddy_config:
+  ollama:

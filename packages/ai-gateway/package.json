@@ -1,0 +1,21 @@
+{
+  "name": "@mgt/ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "tsc -p tsconfig.json && node dist/__smoke__/gateway.js && node dist/__smoke__/pricing.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.2.10",
+    "@mgt/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

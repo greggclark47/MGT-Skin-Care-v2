@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "outDir": ".smoke-build",
+    "rootDir": "src",
+    "incremental": false,
+    "allowJs": false,
+    "plugins": []
+  },
+  "include": ["src/__smoke__/*.tsx", "src/__smoke__/*.ts", "src/lib/hub.ts"],
+  "exclude": ["node_modules", ".next", ".next-dev", ".smoke-build"]
+}
