@@ -44,6 +44,8 @@ The shared portal shell preserves the Skip to content link and moves keyboard fo
 
 The shared shell also maintains route-specific browser titles, politely announces in-portal page changes, and moves focus to the new main content. Support, Coach, and account forms expose busy and associated error states, while the application error boundary focuses its recovery heading. These behaviors preserve the visible MGT experience and still require deployed browser and assistive-technology validation.
 
+Shared confirmation dialogs restore opener focus and expose their title, description and busy state. Retailer comparisons, Shop filters, reviewed-library search and Replenishment totals now connect their controls and politely announced status text. These improvements do not alter retailer ranking, catalog content, reminders, purchases or commercial boundaries.
+
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text

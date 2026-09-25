@@ -1,6 +1,6 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 2.5
+**Version:** 3.0
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
 **Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
@@ -118,6 +118,16 @@ Required implementation controls if subscription confirmations are approved: one
 **Phase F5 — customer-form state checkpoint:** Support guidance, saved Support requests, Skin Coach, and account sign-in now expose their busy state and associate server errors with the relevant form. The question and verification controls mark failed input states and clear the stale error when the customer edits the affected value. Existing submission, consent, authentication, and payment boundaries are unchanged.
 
 **Phase F6 — recovery-focus checkpoint:** The application error boundary moves focus to its recovery heading when an unexpected route failure is shown. Customers can retry or return to Applications using the existing recovery actions. This is a local focus-management safeguard; real assistive-technology announcement quality and failure behavior under deployed network conditions remain open.
+
+**Phase F7 — confirmation-dialog checkpoint:** Shared confirmation dialogs expose their title, description, modal and busy states, retain native keyboard containment, and explicitly restore focus to the control that opened them when they close. Account deletion and routine simplification keep their existing confirmation boundaries.
+
+**Phase F8 — retailer-shortlist checkpoint:** The shortlist announces its selected count and connects its heading, instructions and count. The existing three-retailer cap, URL persistence, independent-listing disclosure, download, copy and removal behavior are unchanged.
+
+**Phase F9 — Shop-filter checkpoint:** Shop search, region and specialty controls identify the results they update and the matching-destination status that describes them. The result count is atomic and polite, while retailer ordering, links, saved state and referral measurement remain unchanged.
+
+**Phase F10 — reviewed-library search checkpoint:** The reviewed-library search identifies its result collection and live result count. Source links, review status, content and empty states are unchanged.
+
+**Phase F11 — Replenishment feedback checkpoint:** The reminder form exposes busy and associated error states, clears stale errors when values change, and announces planned and due totals. Reminder actions remain planning records and cannot purchase a product.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
