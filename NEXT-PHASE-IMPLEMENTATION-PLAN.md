@@ -1,6 +1,6 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 2.2
+**Version:** 2.5
 **Revision date:** 2026-09-24
 **Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
 **Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
@@ -112,6 +112,12 @@ Required implementation controls if subscription confirmations are approved: one
 **Phase F2 — rendered accessibility markup checkpoint:** The production proxy journey now checks all 29 portal routes for the shared Skip to content link, primary-navigation identity and label, main landmark, labeled policy navigation, and alternative-text attributes on rendered images. This protects the baseline markup from regressions without changing visible content, branding, or page structure. It does not measure keyboard traversal, screen-reader announcements, contrast, zoom/reflow, or real-device behavior; those remain required release evidence.
 
 **Phase F3 — theme accessibility contract:** The local release gate now calculates WCAG contrast ratios for 20 normal-text token pairs across the dark and light themes and requires at least 4.5:1. It also verifies that reduced-motion, forced-color, and visible-focus rules remain declared. The current minimum measured pair is 5.82:1. This protects the declared design tokens and preference hooks; component states, imagery, browser rendering, zoom/reflow, and assistive-technology behavior still require human and device validation.
+
+**Phase F4 — route identity checkpoint:** The shared shell assigns a concise page title to every current customer and operator route. After an in-portal navigation, it updates the browser title and a polite live region while the existing focus behavior moves to the main landmark. This improves page context without changing visible navigation, branding, routes, or layout.
+
+**Phase F5 — customer-form state checkpoint:** Support guidance, saved Support requests, Skin Coach, and account sign-in now expose their busy state and associate server errors with the relevant form. The question and verification controls mark failed input states and clear the stale error when the customer edits the affected value. Existing submission, consent, authentication, and payment boundaries are unchanged.
+
+**Phase F6 — recovery-focus checkpoint:** The application error boundary moves focus to its recovery heading when an unexpected route failure is shown. Customers can retry or return to Applications using the existing recovery actions. This is a local focus-management safeguard; real assistive-technology announcement quality and failure behavior under deployed network conditions remain open.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 

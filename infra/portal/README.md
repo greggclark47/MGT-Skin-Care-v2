@@ -42,6 +42,8 @@ The shared portal shell preserves the Skip to content link and moves keyboard fo
 
 `node infra/portal/accessibility-theme-contract.cjs` calculates WCAG contrast for the declared normal-text theme-token pairs, requiring 4.5:1 in both themes, and protects the reduced-motion, forced-color, and visible-focus rules. It is included in `node infra/portal/verify.cjs`. Component-state, image, zoom/reflow, browser, and assistive-technology review remain separate release evidence.
 
+The shared shell also maintains route-specific browser titles, politely announces in-portal page changes, and moves focus to the new main content. Support, Coach, and account forms expose busy and associated error states, while the application error boundary focuses its recovery heading. These behaviors preserve the visible MGT experience and still require deployed browser and assistive-technology validation.
+
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text

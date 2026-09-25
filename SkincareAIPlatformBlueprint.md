@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.10-planning
+**Version:** 2.1.13-planning
 **Revision date:** 2026-09-24
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -196,6 +196,8 @@ The shared portal shell now manages keyboard focus on navigation. In-portal rout
 The production proxy journey now also guards shared rendered accessibility markup across all 29 portal routes: a Skip to content link, primary-navigation identity and label, main landmark, labeled policy navigation, and alternative-text attributes for rendered images. The evidence is local and production-build based; it does not establish real keyboard traversal, announcement quality, contrast, zoom/reflow, device behavior, or WCAG conformance.
 
 The release gate now calculates contrast for 20 declared normal-text token pairs across the dark and light themes, requiring at least 4.5:1; all pass, with a 5.82:1 minimum. It also protects reduced-motion, forced-color, and visible-focus declarations. These automated checks cover the token contract rather than every rendered component, image, state, browser, device, or assistive-technology experience.
+
+Three additional local accessibility phases are implemented. Every current customer and operator route receives a concise browser title and a polite page-change announcement alongside main-landmark focus. Support, Skin Coach, and account sign-in forms expose busy state and associated server errors, with stale field errors cleared on edit. The application error boundary focuses its recovery heading. These changes preserve the existing visible shell and do not establish deployed screen-reader, keyboard, device, zoom/reflow, or complete WCAG evidence.
 
 The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 

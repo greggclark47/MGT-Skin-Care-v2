@@ -51,26 +51,26 @@ export default function Support(){
   <section className="panel stack" aria-labelledby="guide-heading">
    <span className="eyebrow">QUICK PORTAL GUIDANCE</span><h2 id="guide-heading">Find your next step</h2>
    <p>Get directions for using the portal. A suggestion here does not submit a support request or confirm a retailer payment.</p>
-   <form className="stack" onSubmit={askGuide} aria-busy={guideBusy}>
+   <form className="stack" onSubmit={askGuide} aria-busy={guideBusy} aria-describedby={guideError?'guide-error':undefined}>
     <label className="field">Help topic
      <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideQuestion('');setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
     </label>
     <label className="field">Your question
-     <textarea required maxLength={1800} value={question} disabled={guideBusy} aria-describedby="guide-count" placeholder="What would you like help with?" onChange={e=>setQuestion(e.target.value)}/>
+     <textarea required maxLength={1800} value={question} disabled={guideBusy} aria-describedby={guideError?'guide-count guide-error':'guide-count'} aria-invalid={!!guideError} placeholder="What would you like help with?" onChange={e=>{setQuestion(e.target.value);if(guideError)setGuideError('');}}/>
     </label>
     <span className="muted" id="guide-count">{question.length} / 1,800 characters</span>
     {reviewed&&<>
      {!session.loading&&!reviewedReady&&<p className="notice">Retailer and payment directions remain available. For reviewed skincare answers, <Link className="text-link" href="/account">sign in →</Link> and use the analysis service when it is available.</p>}
      <label className="check-label"><input type="checkbox" checked={consent} disabled={guideBusy} onChange={e=>setConsent(e.target.checked)}/>Allow the platform analysis service to process this question.</label>
     </>}
-    {guideError&&<p ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
+    {guideError&&<p id="guide-error" ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
    {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
 
-  {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
-  <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" className="panel stack support-form" onSubmit={submit}>
+  {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p id="support-error" className="notice error" role="alert">{error}</p>}
+  <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" aria-describedby={error?'support-error':undefined} aria-busy={busy} className="panel stack support-form" onSubmit={submit}>
    <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
    <label className="field">Request type<select disabled={busy} value={requestType} onChange={e=>{setRequestType(e.target.value as RequestType);setRequestSource('support_form');}}>{requestTypes.map(([value,title])=><option key={value} value={value}>{title}</option>)}</select></label>
    <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
