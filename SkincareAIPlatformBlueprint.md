@@ -1,7 +1,7 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.28-planning
-**Revision date:** 2026-09-24
+**Version:** 2.1.29-planning
+**Revision date:** 2026-09-25
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
 
@@ -11,7 +11,7 @@ This blueprint describes the product that exists in the verified repository and 
 
 MGT Skin Care v2 is a skincare discovery and routine-guidance portal. It helps a visitor explore skin concerns, receive a bounded skin-match result, build a routine, ask a care coach for product-owned guidance, save a shortlist, and follow independent external storefront links. The portal is educational and product-guidance software. It is not a diagnostic, telehealth, medical-record, or direct-commerce system.
 
-The shop currently provides six independent external retailer links with filters and saved lists. The portal does not process checkout, carts, fulfillment, refunds, payouts, affiliate attribution, or consumer membership billing. Vendor-of-record responsibilities remain with each external storefront.
+The shop currently provides six independent external retailer links with filters and saved lists. The portal does not process retailer checkout, carts, fulfillment, refunds, payouts, or affiliate attribution. Vendor-of-record responsibilities remain with each external storefront. A separate subscription area presents three provisional MGT plans, but enrollment is disabled until approved prices, benefits, terms, account configuration, and staging evidence are supplied.
 
 ## 2. Product objectives and non-goals
 
@@ -181,7 +181,7 @@ References:
 
 The detailed execution sequence is in [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT-PHASE-IMPLEMENTATION-PLAN.md). It extends existing journeys with constrained customer-care, onboarding, routine-guidance, and product/referral education roles. The gateway remains the model-routing boundary. OpenClaw is optional and stays disabled until its runtime and tool boundaries pass qualification. Any new customer-facing flow must preserve explicit consent, approved-source grounding, deterministic routine changes, safe escalation, and human handoff.
 
-Payment records remain separated by merchant. MGT does not issue confirmations or receipts for external retailer purchases. MGT product checkout remains blocked. Subscription code is separately gated and locally tested with a mocked provider; prices, benefits, terms, and live provider behavior are unverified. Future subscription confirmation must use signed provider events and provider-issued receipts or invoices, with owner-only status and sanitized operator visibility.
+Payment records remain separated by merchant. MGT does not issue confirmations or receipts for external retailer purchases, and MGT product checkout remains blocked. Subscription code now exposes three provisional options—Essential, Personalized, and Professional—with a draft comparison and transparent recommendation based on saved routine and budget preferences. The recommendation makes no paid model call and cannot enroll or charge a user. The mocked integration covers plan-specific monthly/annual Price selection, recurring consent, Checkout and billing-portal routing, trial handling, signed-event plan reconciliation, owner-only status, and sanitized activity. Every local release gate passed at `work/verification/2026-09-25T16-05-56-744Z/report.md`. Prices, benefits, entitlements, terms, account connection, and live provider behavior remain unverified. Provider-issued receipts and invoices stay in the provider portal.
 
 GTM work starts with consent-aware measurement and low-cost owned/organic learning. Affiliate attribution, partner claims, sponsored placement, and paid campaigns require written terms, approved disclosures, baseline economics, and a budget cap. Financial optimization must retain recommendation quality, safety, accessibility, and privacy controls. These items are planned and do not change the current release status.
 
@@ -217,5 +217,6 @@ Commit `f075a43` improves keyboard focus in the Support guidance panel without c
 - Current scope: `CURRENT-SCOPE.md`
 - Business/GTM assumptions: `business/OPERATING-MODEL-AND-GTM.md`
 - Billing and subscription setup: `infra/portal/README.md`
+- Provisional plan catalog and billing mapping: `apps/api/src/portal/plans.ts`, `apps/api/src/portal/billing.ts`, `apps/web/src/app/membership/page.tsx`
 - OpenClaw and hosted model routing: `packages/ai-gateway/src/task-registry.ts`, `packages/ai-gateway/src/runtime.ts`
 - Release gates and evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `BUILD-READINESS-GUIDE.md`

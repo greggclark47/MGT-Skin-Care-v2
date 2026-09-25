@@ -5,21 +5,24 @@ The phased build, test and production-readiness program is maintained in [`BUILD
 ## Implemented
 - Existing customer tabs use /api/hub: profile/matching, routine simplification, saved retailer destinations, reminders, knowledge, coach, session/account, and support.
 - Administration pages now call the same verified-session API. A typed user ID no longer supplies identity. Roles must be provisioned in the accounts record by an operator. No public role-grant endpoint exists.
-- Consumer and vendor subscription placements share /membership but have separate Stripe Price IDs, customer records, checkout attempts, and status records.
+- Three provisional subscription options share `/membership`: Essential and Personalized for consumers, plus Professional for business onboarding. Each plan has separate monthly/annual Stripe Price configuration; customer, checkout-attempt, and confirmed status records remain isolated by consumer/business audience.
 - Product checkout, payouts, refunds and vendor transfers remain blocked. Buying a vendor subscription does not establish a commercial partnership or publish a listing.
-- Subscription pricing and paid feature entitlements remain TBD. No existing tab is paywalled, and no paid benefits are promised yet.
+- Subscription pricing and paid feature entitlements remain TBD. The comparison is explicitly a placeholder, enrollment remains closed without complete approval/configuration, no existing tab is paywalled, and no paid benefits are promised yet.
+- A transparent `transparent_rules_v1` recommendation uses only the saved routine level and budget range when present. It makes no model call, adds no inference cost, sends no profile data to a provider, and cannot enroll or charge a customer.
 - Shop outbound opens and saved-list changes are counted only as daily aggregate engagement. Authorized operations roles can view a 30-day retailer and segment summary; it contains no customer identity, skin profile, search, free text, order, amount, revenue or profit data. These counters expire after 180 days by default through `OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS`.
 - Assistant guidance results and selections of approved portal next steps are also stored as daily aggregate counters. The operations panel shows guidance by bounded role and the aggregate Support handoff funnel. It does not store the submitted question, customer identity, account details or ticket text in those metrics, and the counts are not unique-customer or service-outcome measures.
 
 ## Stripe setup
-1. Use a Stripe sandbox/test account first. Create separate recurring consumer and vendor Prices after prices and benefits are approved.
-2. Set STRIPE_CONSUMER_PRICE_ID and STRIPE_VENDOR_PRICE_ID. Set STRIPE_SECRET_KEY server-side only.
-3. Configure the Stripe customer portal for payment methods, invoices and cancellation. Set business identity and terms URL in Stripe.
+1. Use a Stripe sandbox/test account first. After names, benefits, limits, prices, trial terms, and support ownership are approved, create monthly and annual recurring Prices for Essential, Personalized, and Professional.
+2. Set `STRIPE_ESSENTIAL_MONTHLY_PRICE_ID`, `STRIPE_ESSENTIAL_ANNUAL_PRICE_ID`, `STRIPE_PERSONALIZED_MONTHLY_PRICE_ID`, `STRIPE_PERSONALIZED_ANNUAL_PRICE_ID`, `STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID`, and `STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID`. Keep `STRIPE_SECRET_KEY` server-side only. Older consumer/vendor variables remain migration fallbacks for Personalized and Professional, but new production preflight requires the named plan variables.
+3. The app creates a restricted customer-portal configuration for payment methods, provider invoices, end-of-period cancellation, and approved same-audience plan changes. Set the business identity and terms URL in the Stripe account.
 4. Register /webhooks/subscriptions on the API (the included edge configuration forwards it). Subscribe to checkout.session.completed and customer.subscription.created, updated and deleted. Store its signing secret in STRIPE_SUBSCRIPTION_WEBHOOK_SECRET.
 5. Finalize company legal_name, support_email and policies_published in settings/company, then set SUBSCRIPTION_TERMS_APPROVED=true and SUBSCRIPTIONS_ENABLED=true.
 6. Test checkout, decline, renewal failure, cancellation, portal access and replayed events in the sandbox before configuring live credentials. Browser return URLs never activate access.
 
-Current local tests use a mocked Stripe client with real signature verification. No Stripe account has been provisioned, prices created, payments collected, or live webhooks validated.
+Current local tests use a mocked Stripe client with real signature verification. They cover the three-plan catalog, recommendation rules, configured-price validation, Checkout metadata, trial handling, portal access, signed-event confirmation, duplicate delivery, ownership, and sanitized activity. No Stripe account has been provisioned, prices created, payments collected, or live webhooks validated.
+
+The 2026-09-25 provisional plans checkpoint passed every local release gate at `work/verification/2026-09-25T16-05-56-744Z/report.md`: 70 HTTP/persistence/release-contract tests, production web build, 29-route proxy journey, accessibility-theme contract, and a zero-hit public artifact vendor scan. This is local fixture evidence only.
 
 ## Deployment scaffold
 Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL must identify the reviewed Supabase database, use verified TLS, and URI-encode reserved characters in credentials. API and worker use the same external database. Compose no longer provisions an independent database; existing local database volumes have not been deleted. Only the TLS edge publishes host ports. API refuses demo mode or HTTP public origins in production. Web-to-API forwarding is set at build time. Do not deploy before schema/identity reconciliation and role-based RLS checks.
@@ -103,7 +106,7 @@ Validation: API compilation, web build, existing referral suite and new billing 
 ## Trial and billing-cycle update
 New eligible consumer and vendor subscriptions use a 14-day free trial with payment_method_collection=always. The first paid billing period begins at trial end. No upfront subscription payment is collected. Trial eligibility is once per signed-in account and subscription audience, based on stored history and Stripe subscription history.
 
-Configure monthly and annual recurring Price IDs using STRIPE_CONSUMER_MONTHLY_PRICE_ID, STRIPE_CONSUMER_ANNUAL_PRICE_ID, STRIPE_VENDOR_MONTHLY_PRICE_ID and STRIPE_VENDOR_ANNUAL_PRICE_ID. The older CONSUMER_PRICE_ID and VENDOR_PRICE_ID remain monthly fallbacks. Monthly Prices must recur every month and annual Prices every year, interval_count=1. Prices remain TBD; no prices were created.
+Configure monthly and annual recurring Price IDs with the six named plan variables listed above. The older consumer/vendor variables remain temporary Personalized/Professional fallbacks. Monthly Prices must recur every month and annual Prices every year, with `interval_count=1`. Prices remain TBD; no prices were created.
 
 The app creates a restricted Stripe billing-portal configuration: cancellations at period end, payment methods and invoices enabled, paid subscription price changes limited to that audience's configured Prices with Stripe confirmation and prorated invoicing. Trial-cycle changes use a separate authenticated endpoint, leaving trial_end untouched and creating no prorations. Trial subscriptions cannot change Prices through the billing portal because that could end a trial early. During a trial, cancellation ends access at trial end without starting the paid cycle. In a paid period, access remains until the end of that period. Payment failures can still suspend access according to subscription status.
 

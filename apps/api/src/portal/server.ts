@@ -15,6 +15,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import {stripeFromEnv,processStripeEvent,type StripeClient} from './payments';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {operationalReadiness} from './operations';
+import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
@@ -37,7 +38,7 @@ function publicSubscriptionRecord(record:any){
  return {status:typeof record.status==='string'?record.status:'unknown',active:record.active===true,
   cancel_at_period_end:record.cancel_at_period_end===true,trial_end:record.trial_end||null,
   current_period_end:record.current_period_end||null,cycle:['monthly','annual'].includes(record.cycle)?record.cycle:null,
-  trial_used:record.trial_used===true};
+  plan_id:PLAN_DEFINITIONS.some(plan=>plan.id===record.plan_id)?record.plan_id:null,trial_used:record.trial_used===true};
 }
 function publicSupportTicket(ticket:any){
  return {id:ticket.id,subject:ticket.subject,message:ticket.message,status:SUPPORT_STATUSES.includes(ticket.status)?ticket.status:'open',request_type:SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help',replies:Array.isArray(ticket.replies)?ticket.replies.map((reply:any)=>({text:reply.text,at:reply.at})):[],created_at:ticket.created_at||null,updated_at:ticket.updated_at||ticket.created_at||null};
@@ -329,7 +330,7 @@ export async function createPortal(options:PortalOptions){
  {name:'Analysis service',configured:coach.configured},
  {name:'Subscription signing key',configured:!!env.STRIPE_SECRET_KEY},
  {name:'Subscription event signing',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET},
- ...['CONSUMER','VENDOR'].flatMap(a=>['MONTHLY','ANNUAL'].map(c=>({name:a.toLowerCase()+' '+c.toLowerCase()+' price',configured:!!(env['STRIPE_'+a+'_'+c+'_PRICE_ID']||(c==='MONTHLY'&&env['STRIPE_'+a+'_PRICE_ID']))}))),
+ ...PLAN_DEFINITIONS.flatMap(plan=>BILLING_CYCLES.map(cycle=>({name:plan.name+' '+cycle+' price',configured:!!priceIdFor(env,plan,cycle)}))),
  {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published},
  {name:'Company details',configured:!!(company?.legal_name&&company?.support_email)},
   {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},

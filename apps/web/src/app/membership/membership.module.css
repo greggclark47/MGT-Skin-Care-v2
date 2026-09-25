@@ -1,0 +1,60 @@
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.planCard {
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #16131c, #0e0e13);
+}
+
+.selected {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 1px #7c3aed55;
+}
+
+.planCard h3 {
+  margin: 24px 0 4px;
+}
+
+.planCard ul {
+  flex: 1;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.planCard li + li {
+  margin-top: 8px;
+}
+
+.planCard button {
+  margin-top: 22px;
+}
+
+.planPrice {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.planMatch {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--success);
+  color: #101015;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .planGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 650px) {
+  .planGrid { grid-template-columns: 1fr; }
+}

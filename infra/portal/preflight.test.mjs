@@ -62,7 +62,24 @@ test("requires the complete billing contract when subscriptions are enabled", ()
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.includes("SUBSCRIPTION_TERMS_APPROVED")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_SECRET_KEY")));
-  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_VENDOR_ANNUAL_PRICE_ID")));
+  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID")));
+});
+
+test("accepts the complete three-plan subscription configuration", () => {
+  const result = validateEnvironment({
+    ...production,
+    SUBSCRIPTIONS_ENABLED: "true",
+    SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_SECRET_KEY: "sk_live_configured",
+    STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
+    STRIPE_ESSENTIAL_MONTHLY_PRICE_ID: "price_essential_month",
+    STRIPE_ESSENTIAL_ANNUAL_PRICE_ID: "price_essential_year",
+    STRIPE_PERSONALIZED_MONTHLY_PRICE_ID: "price_personalized_month",
+    STRIPE_PERSONALIZED_ANNUAL_PRICE_ID: "price_personalized_year",
+    STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID: "price_professional_month",
+    STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID: "price_professional_year"
+  });
+  assert.equal(result.ok, true);
 });
 
 test("requires secure webhook delivery settings", () => {

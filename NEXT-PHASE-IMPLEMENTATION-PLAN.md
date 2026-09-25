@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 4.0
-**Revision date:** 2026-09-24
-**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest Support and referral-measurement checkpoints verified locally
-**Status:** Assistant API, typed Support intake, customer/operator request lifecycle, aggregate assistant/Support measurement, privacy-safe referral engagement measurement, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
+**Version:** 4.1
+**Revision date:** 2026-09-25
+**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest portal, accessibility, and provisional subscription phases verified locally
+**Status:** Assistant and Support foundations, privacy-safe measurement, accessibility phases, and a provisional three-plan subscription/Stripe integration are locally implemented; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -81,11 +81,21 @@ Use these status labels in implementation and reporting:
 |---|---|---|
 | Retailer product purchase confirmation | **Not implemented by MGT; intentionally outside current scope.** | The retailer is merchant of record and sends its own confirmation, invoice and receipt. MGT may link users to retailer support but must not fabricate purchase status. |
 | MGT product checkout, order receipt, refund or fulfillment | **Blocked by current scope and API boundary.** Legacy paths remain gated. | Keep disabled unless the user separately approves a commerce model, vendor agreements, legal terms, tax/shipping operations, support ownership, database reconciliation and provider plan. |
-| Consumer/vendor subscription checkout | **Scaffolded and locally tested with mocked Stripe; disabled by default.** Prices/benefits/terms and live Stripe account are unverified. | Before any launch, approve audience, offer, price, terms, trial/cancellation/refund language and customer support owner; provision Stripe sandbox; validate signed webhook reconciliation and entitlement behavior; then make a separate production enablement decision. |
+| Essential, Personalized, and Professional subscription checkout | **Three-plan scaffold locally tested with a mocked Stripe client; disabled by default.** The plan comparison and recommendation are provisional. Prices/benefits/terms and a live account are unverified. | Before any launch, approve each offer, price, limit, entitlement, trial/cancellation/refund language and customer support owner; provision a sandbox; validate signed webhook reconciliation and entitlement behavior; then make a separate production enablement decision. |
 | Subscription status and webhook records | **Local implementation exists.** Activity and sanitized webhook receipt operations are not a customer payment receipt. | Derive confirmed status only from verified provider events. Treat browser return URLs as navigation, not proof of payment. Show only minimal status to the signed-in owner; provide the payment provider's invoice/receipt portal where available. |
 | Confirmation email or SMS | **No live delivery path verified.** | Choose a transactional provider, sender identity and recipient policy. Send only after authoritative signed-event confirmation, with idempotency, retry, suppression, redaction and auditable delivery outcome. |
 
 Required implementation controls if subscription confirmations are approved: one confirmation per provider event/transaction, idempotent event handling, server-side ownership verification, currency/amount/plan identity from provider data, UTC timestamps, provider reference, privacy-minimized record, correction/refund status where applicable, customer-readable support route, operator view limited by role, retention schedule, and reconciliation for delayed/duplicate/failed events. Never expose full payment credentials or sensitive provider payloads to the customer portal or AI context.
+
+**Five-phase provisional plans and Stripe checkpoint:**
+
+1. A server-owned catalog now defines Essential, Personalized, and Professional as provisional offers with draft comparison content and independent monthly/annual Price configuration.
+2. `transparent_rules_v1` suggests Essential or Personalized from saved routine level and budget range. The logic is deterministic, makes no paid model call, sends no profile data outside the portal, and cannot enroll a user.
+3. Checkout, trial plan/cycle changes, and the customer billing portal carry and validate plan identity while retaining audience isolation, recurring-consent, published-terms, ownership, idempotency, and HTTPS-return controls.
+4. Signed subscription events map confirmed Price IDs back to a plan and billing cycle. Customer status and activity include only the safe plan identifier; browser returns still do not activate access, and invoices remain in the provider portal.
+5. Production preflight and operator readiness now enumerate all six named plan Price IDs. Enrollment remains closed until pricing and benefits are approved, terms/company details are published, subscription flags and signing secrets are configured, and sandbox/live evidence is completed.
+
+This checkpoint does not create prices, connect an account, collect a payment, finalize benefits, or change the retailer merchant-of-record boundary. The legacy consumer/vendor variables remain migration fallbacks for Personalized and Professional; new production preflight requires explicit Price IDs for all three plans. Focused checks and every full local release gate passed at `work/verification/2026-09-25T16-05-56-744Z/report.md`, including 70 HTTP/persistence/release-contract tests, the production web build, 29-route proxy journey, and zero-hit public artifact vendor scan.
 
 **External dependencies:** sandbox/live account, signed webhook secret, approved prices and terms, business identity/support contact, configured database and TLS origins, security/RLS review, transactional communications provider (if messaging is wanted), legal/privacy review and named reconciliation owner. Keep live charges and all retail-purchase confirmations blocked until the exact capability has approval and staging evidence.
 
@@ -210,4 +220,4 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 3. **High — support operations:** define ticket ownership, escalation reason, response state and safe operator visibility. Configure external delivery only after a provider and owner are chosen; record delivery outcome rather than implying a message was sent.
 4. **Critical — approved knowledge and runtime:** complete catalog/SME source coverage; run the existing gateway and optional OpenClaw path in staging with model inventory, privacy, timeout, schema, tool isolation, latency and rollback evidence. Keep `OPENCLAW_ENABLED=false` until the qualification decision.
 5. **High — measurement:** instrument consent-aware assistant entry, helpful next-step selection and handoff completion through the analytics registry without storing message content. Establish a baseline before paid marketing tests.
-6. **Blocked until business decision — payments and campaigns:** retain retailer payment/receipt boundaries. Specify any MGT subscription confirmation only after the offer, provider, signed events, terms and support owner are approved. Cap paid or affiliate experiments only after agreements and contribution metrics are available.
+6. **Blocked until business decision — live payments and campaigns:** retain retailer payment/receipt boundaries. The three-plan Stripe scaffold is repository-ready, but enabling enrollment still requires approved offers and prices, a connected sandbox/live account, signed-event evidence, terms and a support owner. Cap paid or affiliate experiments only after agreements and contribution metrics are available.
