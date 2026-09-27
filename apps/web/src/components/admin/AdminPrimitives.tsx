@@ -147,9 +147,9 @@ export function AuditTrail({ entries }: { entries: Array<{ actor_id: string; act
         }}>
           <code style={{ fontSize: font.size.xs, color: color.accent }}>{e.action}</code>
           <span style={{ color: color.textMuted }}>by {e.actor_id}</span>
-          <span style={{ color: color.textFaint, marginLeft: 'auto', fontSize: font.size.xs }}>
+          <time dateTime={e.created_at} style={{ color: color.textFaint, marginLeft: 'auto', fontSize: font.size.xs }}>
             {new Date(e.created_at).toISOString().replace('T', ' ').slice(0, 19)}
-          </span>
+          </time>
         </li>
       ))}
     </ol>

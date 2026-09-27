@@ -4,6 +4,10 @@ import { SkinMatchStep } from '../components/SkinMatchStep';
 import { ProductExplanationCard, humanizeReason } from '../components/ProductExplanation';
 import { MedicalDisclosure } from '../components/MedicalDisclosure';
 import { Brand } from '../components/Brand';
+import { AccountDeletionPanel, RestockAlerts, SkinFeedbackOptions, SupportHistory } from '../components/CustomerStatusPanels';
+import { CharacterCount, LoadState } from '../components/HubFrames';
+import { GuestInvitationList } from '../components/GuestAccess';
+import { RetailerSaveButton } from '../components/RetailerDirectory';
 import { CORE_STEPS, toggleChoice, progress, toProfileInput, isStepAnswered, type AnswerState } from '@mgt/shared';
 import { color } from '../components/theme-tokens';
 import type { ProductExplanation } from '@mgt/domain';
@@ -127,6 +131,70 @@ console.log('\n== 7. Medical disclosure states the boundary ==');
   check('states cosmetic-not-medical', html.includes('not medical care') || html.includes('Cosmetic guidance'));
   check('offers escalation path', /dermatologist/i.test(html));
   check('makes no diagnosis or cure claim', !/cure|diagnos(e|is)|treat your/i.test(html.replace('not a diagnosis', '')));
+}
+
+console.log('\n== 7b. Customer histories expose state and dates semantically ==');
+{
+  const deletion = renderToStaticMarkup(<AccountDeletionPanel
+    deletion={{ not_before: '2026-10-25T12:00:00.000Z', status: 'pending', blocked_reasons: ['active_consumer_subscription'] }}
+    busy={false} onRequest={() => {}} onCancel={() => {}}
+  />);
+  check('deletion schedule uses a machine-readable timestamp', deletion.includes('<time dateTime="2026-10-25T12:00:00.000Z"'));
+  check('deletion blockers are listed by reason', deletion.includes('active consumer subscription') && deletion.includes('<ul>'));
+
+  const support = renderToStaticMarkup(<SupportHistory tickets={[{
+    id: 'ticket-1', subject: 'Routine help', message: 'Can you review this?', status: 'waiting_customer',
+    request_type: 'routine_guidance', created_at: '2026-09-25T12:00:00.000Z', updated_at: '2026-09-25T13:00:00.000Z',
+    replies: [{ text: 'Please share which portal step failed.', at: '2026-09-25T13:00:00.000Z' }],
+  }]}/>);
+  check('support request card is labelled by its heading', support.includes('aria-labelledby="customer-ticket-ticket-1"'));
+  check('support dates keep original ISO values', support.includes('<time dateTime="2026-09-25T12:00:00.000Z"') && support.includes('<time dateTime="2026-09-25T13:00:00.000Z"'));
+  check('customer-visible replies are named', support.includes('Customer-visible replies'));
+
+  const alerts = renderToStaticMarkup(<RestockAlerts
+    notifications={[{ id: 'alert-1', kind: 'replenishment_reminder', status: 'delivered', created_at: '2026-09-25T12:00:00.000Z', payload: { product_id: 'cleanser-1', due_at: '2026-09-24T12:00:00.000Z' } }]}
+    unread={1} name={() => 'Barrier Cleanser'} busy="" onRead={() => {}}
+  />);
+  check('restock alerts announce count and unread state', alerts.includes('role="status"') && alerts.includes('1 recent alert · 1 unread'));
+  check('restock alert due date is machine-readable', alerts.includes('<time dateTime="2026-09-24T12:00:00.000Z"'));
+  check('mark-read action is tied to the alert heading', alerts.includes('aria-describedby="restock-alert-alert-1"'));
+
+  const unrelatedBusyAlert = renderToStaticMarkup(<RestockAlerts
+    notifications={[{ id: 'alert-1', kind: 'replenishment_reminder', status: 'delivered', created_at: '2026-09-25T12:00:00.000Z', payload: { product_id: 'cleanser-1', due_at: '2026-09-24T12:00:00.000Z' } }]}
+    unread={1} name={() => 'Barrier Cleanser'} busy="save" onRead={() => {}}
+  />);
+  check('unrelated restock saves do not disable mark-read', !unrelatedBusyAlert.includes('disabled=""') && unrelatedBusyAlert.includes('Mark as read'));
+
+  const matchingBusyAlert = renderToStaticMarkup(<RestockAlerts
+    notifications={[{ id: 'alert-1', kind: 'replenishment_reminder', status: 'delivered', created_at: '2026-09-25T12:00:00.000Z', payload: { product_id: 'cleanser-1', due_at: '2026-09-24T12:00:00.000Z' } }]}
+    unread={1} name={() => 'Barrier Cleanser'} busy="notification-alert-1" onRead={() => {}}
+  />);
+  check('matching restock save disables only that mark-read action', matchingBusyAlert.includes('disabled=""') && matchingBusyAlert.includes('Saving…'));
+
+  const count = renderToStaticMarkup(<CharacterCount id="test-count" current={23} max={1800}/>);
+  check('shared character count is polite and atomic', count.includes('id="test-count"') && count.includes('role="status"') && count.includes('aria-atomic="true"') && count.includes('23 / 1,800 characters'));
+
+  const loadError = renderToStaticMarkup(<LoadState loading={false} error="Could not load." retry={() => {}}/>);
+  check('retry controls do not submit surrounding forms', loadError.includes('type="button"') && loadError.includes('Try again'));
+
+  const invitations = renderToStaticMarkup(<GuestInvitationList
+    invitations={[
+      { id: 'invite-1', email: 'first@example.test', mode: 'basic', status: 'pending', expires_at: '2026-10-25T12:00:00.000Z' },
+      { id: 'invite-2', email: 'second@example.test', mode: 'match_owner', status: 'active', expires_at: '2026-10-26T12:00:00.000Z' },
+    ]}
+    busy="revoke:invite-1" onRevoke={() => {}}
+  />);
+  check('guest invitations expose machine-readable expiry dates', invitations.includes('<time dateTime="2026-10-25T12:00:00.000Z"') && invitations.includes('<time dateTime="2026-10-26T12:00:00.000Z"'));
+  check('revoking one guest disables only that guest action', (invitations.match(/disabled=""/g) || []).length === 1 && invitations.includes('Revoking…') && invitations.includes('Revoke guest access'));
+
+  const feedback = renderToStaticMarkup(<SkinFeedbackOptions busy="irritation" onFeedback={() => {}}/>);
+  check('routine feedback disables only the active choice', (feedback.match(/disabled=""/g) || []).length === 1 && feedback.includes('Saving…') && feedback.includes('Comfortable'));
+
+  const savingRetailer = renderToStaticMarkup(<>
+    <RetailerSaveButton id="one" name="One Store" saved={false} busy="one" blocked={false} onToggle={() => {}}/>
+    <RetailerSaveButton id="two" name="Two Store" saved={true} busy="one" blocked={false} onToggle={() => {}}/>
+  </>);
+  check('retailer save disables only the active destination', (savingRetailer.match(/disabled=""/g) || []).length === 1 && savingRetailer.includes('Saving…') && savingRetailer.includes('Saved ✓'));
 }
 
 console.log(failures === 0 ? '\nWEB UI: ALL CHECKS PASSED' : `\nWEB UI: ${failures} CHECK(S) FAILED`);

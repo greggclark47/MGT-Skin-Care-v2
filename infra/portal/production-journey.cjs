@@ -1,21 +1,29 @@
 // Production web -> same-origin proxy -> API -> SQLite journey v1.2.
 // Auth is a fixed test double. This never loads .env or connects to production.
-const assert=require('node:assert/strict'),http=require('node:http'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),path=require('node:path');
 const root=path.resolve(__dirname,'../..');
 const next=require(path.join(root,'apps/web/node_modules/next'));
 const {createPortal}=require(path.join(root,'apps/api/dist/portal/server'));
 const {LocalStore}=require(path.join(root,'apps/api/dist/portal/store'));
-async function listen(server,port){await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});}
+async function listen(server,port=0){await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});return server.address().port;}
 async function close(server){if(!server?.listening)return;server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 async function main(){
- const store=new LocalStore(':memory:');let apiServer,webServer,web;
+ const store=new LocalStore(':memory:');let apiServer,webServer,web,reservedWebServer;
  try{
-  // The existing compiled rewrite targets this local port. Never terminate an existing listener.
-  const webOrigin='http://127.0.0.1:4320';
+  reservedWebServer=http.createServer((_req,res)=>res.end('reserved'));
+  const webPort=await listen(reservedWebServer);
+  const webOrigin='http://127.0.0.1:'+webPort;
   const app=await createPortal({store,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:webOrigin},verifyOtp:async email=>({id:'journey-user',email})});
-  apiServer=http.createServer(app);await listen(apiServer,3100);
-  web=next({dev:false,dir:path.join(root,'apps/web'),hostname:'127.0.0.1',port:4320});await web.prepare();
-  webServer=http.createServer(web.getRequestHandler());await listen(webServer,4320);
+  apiServer=http.createServer(app);const apiPort=await listen(apiServer);process.env.PORTAL_API_ORIGIN='http://127.0.0.1:'+apiPort;
+  const routesManifest=path.join(root,'apps/web/.next/routes-manifest.json');
+  if(fs.existsSync(routesManifest)){
+   const manifest=JSON.parse(fs.readFileSync(routesManifest,'utf8'));
+   for(const rewrite of manifest.rewrites?.afterFiles||[])if(/^\/api\/(hub|v1)\//.test(rewrite.source))rewrite.destination=rewrite.destination.replace(/^http:\/\/127\.0\.0\.1:\d+/,process.env.PORTAL_API_ORIGIN);
+   fs.writeFileSync(routesManifest,JSON.stringify(manifest,null,2));
+  }
+  web=next({dev:false,dir:path.join(root,'apps/web'),hostname:'127.0.0.1',port:webPort});await web.prepare();
+  await close(reservedWebServer);reservedWebServer=null;
+  webServer=http.createServer(web.getRequestHandler());await listen(webServer,webPort);
   let cookie='',csrf='';
   async function call(route,body){const response=await fetch(webOrigin+route,{method:body===undefined?'GET':'POST',headers:{cookie,origin:webOrigin,'content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};}
   const browserRoutes=['/','/account','/skin-match','/skin-match/results','/my-skin','/routine','/coach','/shop','/saved','/replenishment','/membership','/subscription','/orders','/support','/learn','/company','/trust','/privacy','/terms','/shipping','/partners','/studio','/studio/personal-color','/studio/makeup','/studio/haircare','/studio/hair-color','/studio/style','/studio/clothing','/admin'];
@@ -48,6 +56,6 @@ async function main(){
   assert.equal((await call('/api/hub/profile/remove',{confirm:true,expected_revision:updated.data.revision})).status,200);
   assert.equal((await call('/api/hub/profile')).data.profile,null);
   console.log('PASS production web proxy: auth, CSRF cookie forwarding, profile create/read/update/delete, stale edit rejection, export consistency, subscription reads, saved retailer');
- }finally{await close(webServer);await web?.close();await close(apiServer);await store.close();}
+ }finally{await close(webServer);await web?.close();await close(apiServer);await close(reservedWebServer);await store.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

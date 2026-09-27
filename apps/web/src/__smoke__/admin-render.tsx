@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { IngredientRulesConsole } from '../components/admin/IngredientRulesConsole';
 import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
 import { AuditTable, DataTable, MetricSummary, SupportTicketEditor } from '../components/ConnectedAdmin';
+import { AuditTrail } from '../components/admin/AdminPrimitives';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
 
 // These assert the admin console's SAFETY-RELEVANT claims, not its layout. Each check below
@@ -163,6 +164,7 @@ console.log('\n== 11. Support updates explain and enforce customer-visible repli
   const open = renderToStaticMarkup(<SupportTicketEditor ticket={{ ...baseTicket, status: 'open' }} onSaved={() => {}}/>);
   check('open requests require a reply', open.includes('required=""'));
   check('reply rule is explained before submission', open.includes('A reply is required for Open'));
+  check('reply count is live and associated', open.includes('0 / 4,000 characters') && open.includes('aria-live="polite"'));
   check('form exposes its busy state', open.includes('aria-busy="false"'));
   check('submit button has an explicit type', open.includes('type="submit"'));
 
@@ -187,6 +189,9 @@ console.log('\n== 13. Audit evidence uses machine-readable dates ==');
   check('audit table names its evidence', audit.includes('The 20 most recent recorded portal actions'));
   check('audit timestamp uses the original ISO value', audit.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
   check('audit action is a row header', audit.includes('<th scope="row">ticket.updated</th>'));
+
+  const trail = renderToStaticMarkup(<AuditTrail entries={[{ actor_id: 'sme-1', action: 'knowledge.approved', created_at: '2026-09-25T12:00:00.000Z' }]}/>);
+  check('admin primitive audit trail keeps machine-readable dates', trail.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
 }
 
 console.log(failures === 0

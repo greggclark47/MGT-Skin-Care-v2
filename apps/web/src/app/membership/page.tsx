@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { BillingActivity } from '../../components/BillingActivity';
 import { hub, useHub } from '../../lib/hub';
-import { AppFrame, LoadState } from '../../components/HubFrames';
+import { AppFrame, LoadState, Timestamp } from '../../components/HubFrames';
 import styles from './membership.module.css';
 
 type Plan = {
@@ -18,13 +18,14 @@ const planIds = ['essential', 'personalized', 'professional'] as const;
 const planNames: Record<string, string> = { essential: 'Essential', personalized: 'Personalized', professional: 'Professional' };
 const isPlanId = (value: string | null): value is typeof planIds[number] => !!value && planIds.includes(value as typeof planIds[number]);
 const formatPrice = (pricing: Plan['pricing']) => pricing ? new Intl.NumberFormat(undefined, { style: 'currency', currency: pricing.currency }).format(pricing.amount / 100) + (pricing.interval === 'year' ? ' / year' : ' / month') : 'Pricing pending';
+type BillingAction = 'discard-checkout' | 'portal' | 'trial-cycle' | 'checkout' | '';
 
 export default function Membership() {
   const [planId, setPlanId] = useState<typeof planIds[number]>('essential');
   const [cycle, setCycle] = useState<'monthly' | 'annual'>('monthly');
   const [notice, setNotice] = useState('');
   const [consent, setConsent] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<BillingAction>('');
   const [error, setError] = useState('');
   const catalog = useHub('/billing/plans?cycle=' + cycle);
   const state = useHub('/billing?plan=' + planId + '&cycle=' + cycle);
@@ -35,6 +36,7 @@ export default function Membership() {
   const recommendation = catalog.data?.recommendation;
   const currentPlanName = planNames[data?.subscription?.plan_id] || 'an earlier plan';
   const enrollmentOpen = selected?.enrollment_open === true && data?.configured === true;
+  const busy = busyAction !== '';
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -61,23 +63,24 @@ export default function Membership() {
     setPlanId(id); setConsent(false); setNotice(''); setError('');
   }
 
-  async function billing(action: string) {
-    setBusy(true); setError('');
+  async function billing(action: BillingAction) {
+    if (!action) return;
+    setBusyAction(action); setError('');
     try {
       const result = await hub('/billing/' + action, { plan: planId, cycle, recurring_consent: consent });
       if (action === 'discard-checkout') {
         setNotice('Unfinished checkout discarded. Choose your plan and billing cycle, then continue.');
-        setConsent(false); state.reload(); setBusy(false); return;
+        setConsent(false); state.reload(); setBusyAction(''); return;
       }
       if (action === 'trial-cycle') {
         setNotice('Plan and billing cycle update requested. Your original trial end date is unchanged until confirmation arrives.');
-        state.reload(); setBusy(false); return;
+        state.reload(); setBusyAction(''); return;
       }
       const url = new URL(result.url);
       if (url.protocol !== 'https:') throw Error('Billing returned an invalid destination.');
       window.location.assign(url.href);
     } catch (caught) {
-      setError((caught as Error).message); setBusy(false);
+      setError((caught as Error).message); setBusyAction('');
     }
   }
 
@@ -123,21 +126,21 @@ export default function Membership() {
       <span className="eyebrow">SELECTED PLAN</span>
       <h2 id="selected-plan-heading">{selected?.name || data.offer?.name}: {data.plan ? formatPrice(data.plan) : 'Pricing pending'}</h2>
       {data.subscription?.plan_id && data.subscription.plan_id !== planId && <p className="notice">Your confirmed subscription is currently associated with {currentPlanName}. Use Manage billing to review approved changes.</p>}
-      {data.subscription?.trial_end && <p>Trial ends: <time dateTime={new Date(data.subscription.trial_end * 1000).toISOString()}>{new Date(data.subscription.trial_end * 1000).toLocaleString()}</time></p>}
-      {data.subscription?.current_period_end && <p>{data.subscription.cancel_at_period_end ? 'Service ends' : 'Current period ends'}: <time dateTime={new Date(data.subscription.current_period_end * 1000).toISOString()}>{new Date(data.subscription.current_period_end * 1000).toLocaleString()}</time></p>}
+      {data.subscription?.trial_end && <p>Trial ends: <Timestamp value={new Date(data.subscription.trial_end * 1000).toISOString()}/></p>}
+      {data.subscription?.current_period_end && <p>{data.subscription.cancel_at_period_end ? 'Service ends' : 'Current period ends'}: <Timestamp value={new Date(data.subscription.current_period_end * 1000).toISOString()}/></p>}
       <p>Cancellation takes effect at the end of the current billing period. Paid plan changes may incur prorated charges; review them in the billing service before confirming.</p>
       {data.subscription && <p role="status" aria-live="polite" aria-atomic="true">Status: <strong>{({ trialing: 'Trial active', active: 'Active', past_due: 'Payment overdue', unpaid: 'Payment required', canceled: 'Ended', incomplete: 'Payment incomplete', incomplete_expired: 'Signup expired', paused: 'Paused' } as Record<string, string>)[data.subscription.status] || data.subscription.status}</strong>{data.subscription.cancel_at_period_end ? ' · Renewal turned off' : ''}</p>}
       {['past_due', 'unpaid', 'incomplete'].includes(data.subscription?.status) && <p className="notice error">Your subscription needs payment attention. Use Manage billing to review your payment details.</p>}
       {data.subscription?.cancel_at_period_end && <p className="notice">Renewal is turned off. Service continues until the end date shown above.</p>}
       {!enrollmentOpen && <p className="notice">Enrollment for this draft plan is closed until pricing, benefits, terms, and payment configuration are approved. No charge can be started from this page.</p>}
       <p>Returning from the billing service does not activate access. Only a confirmed signed billing update can change subscription status.</p>
-      <button className="text-button" disabled={state.loading || busy} onClick={state.reload}>Refresh billing status</button>
+      <button className="text-button" type="button" disabled={state.loading || busy} onClick={state.reload}>Refresh billing status</button>
       {!session.data?.account ? <Link className="button" href="/account">Sign in to manage subscriptions</Link> : <>
-        {data.pending_checkout && <div className="notice"><p>You have an unfinished checkout. Discard it before choosing a different plan or billing cycle. This does not cancel an active subscription.</p><button className="button" disabled={busy} onClick={() => void billing('discard-checkout')}>Discard unfinished checkout</button></div>}
-        {data.can_manage && <button className="button" disabled={busy || !data.configured} onClick={() => void billing('portal')}>Manage billing, invoices, and payment methods</button>}
+        {data.pending_checkout && <div className="notice"><p>You have an unfinished checkout. Discard it before choosing a different plan or billing cycle. This does not cancel an active subscription.</p><button className="button" type="button" disabled={busy} onClick={() => void billing('discard-checkout')}>{busyAction === 'discard-checkout' ? 'Discarding checkout…' : 'Discard unfinished checkout'}</button></div>}
+        {data.can_manage && <button className="button" type="button" disabled={busy || !data.configured} onClick={() => void billing('portal')}>{busyAction === 'portal' ? 'Opening billing…' : 'Manage billing, invoices, and payment methods'}</button>}
         {((!data.subscription?.status || ['canceled', 'incomplete_expired'].includes(data.subscription.status)) || (data.subscription?.status === 'trialing' && !data.subscription.cancel_at_period_end)) && <>
           <label className="check-label"><input type="checkbox" checked={consent} disabled={!enrollmentOpen || busy} onChange={event => setConsent(event.target.checked)} />I agree to the displayed recurring rate after any eligible trial ends, and to the subscription terms.</label>
-          <div className="actions"><Link className="text-link" href="/terms">Read terms</Link><button className="button primary" disabled={busy || !consent || !enrollmentOpen} onClick={() => void billing(data.subscription?.status === 'trialing' ? 'trial-cycle' : 'checkout')}>{busy ? 'Please wait…' : data.subscription?.status === 'trialing' ? 'Request plan or cycle change' : data.trial_eligible ? 'Start 14-day trial' : 'Continue to billing'}</button></div>
+          <div className="actions"><Link className="text-link" href="/terms">Read terms</Link><button className="button primary" type="button" disabled={busy || !consent || !enrollmentOpen} onClick={() => void billing(data.subscription?.status === 'trialing' ? 'trial-cycle' : 'checkout')}>{busyAction === 'trial-cycle' ? 'Requesting change…' : busyAction === 'checkout' ? 'Opening checkout…' : data.subscription?.status === 'trialing' ? 'Request plan or cycle change' : data.trial_eligible ? 'Start 14-day trial' : 'Continue to billing'}</button></div>
         </>}
       </>}
     </section>}

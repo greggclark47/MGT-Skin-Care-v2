@@ -54,7 +54,7 @@ export function CoachView({ onSend, messages, pendingDiff, productName, onAccept
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.sm, marginTop: space.md }}>
         {QUICK_INTENTS.map((intent) => (
-          <button key={intent} onClick={() => onSend(intent)} data-testid="quick-intent"
+          <button key={intent} type="button" onClick={() => onSend(intent)} data-testid="quick-intent"
             style={{ minHeight: 36, padding: `0 ${space.md}px`, cursor: 'pointer', borderRadius: radius.pill,
                      border: `1px solid ${color.accentBorder}`, background: color.accentSubtle,
                      color: 'var(--purple)', fontFamily: font.family, fontSize: font.size.sm }}>
@@ -108,13 +108,13 @@ export function CoachView({ onSend, messages, pendingDiff, productName, onAccept
           </p>
 
           <div style={{ display: 'flex', gap: space.sm, marginTop: space.md }}>
-            <button onClick={onAcceptDiff} data-testid="accept-diff"
+            <button type="button" onClick={onAcceptDiff} data-testid="accept-diff"
               style={{ flex: 1, minHeight: TAP_TARGET_MIN, borderRadius: radius.pill, border: 'none', cursor: 'pointer',
                        background: color.accent, color: '#fff', fontFamily: font.family,
                        fontSize: font.size.sm, fontWeight: font.weight.semibold }}>
               Apply change
             </button>
-            <button onClick={onRejectDiff} data-testid="reject-diff"
+            <button type="button" onClick={onRejectDiff} data-testid="reject-diff"
               style={{ minHeight: TAP_TARGET_MIN, padding: `0 ${space.lg}px`, borderRadius: radius.pill, cursor: 'pointer',
                        border: `1px solid ${color.border}`, background: color.bg, color: color.text,
                        fontFamily: font.family, fontSize: font.size.sm }}>

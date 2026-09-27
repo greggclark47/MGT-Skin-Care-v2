@@ -171,6 +171,70 @@ This checkpoint does not create prices, connect an account, collect a payment, f
 
 **F22–F26 verification:** Focused render checks and every full local release gate passed at `work/verification/2026-09-25T16-34-14-942Z/report.md`; the seven-gate local checkpoint passed at `work/checkpoints/2026-09-25T16-34-13-262Z/report.md`. Evidence includes 70 HTTP/persistence/release-contract tests, the production web build, 29-route proxy journey and zero-hit public artifact vendor scan. These checks preserve authorization and API enforcement; deployed keyboard, screen-reader, browser/device and complete WCAG evidence remain required.
 
+**Phase F27 — customer request history semantics checkpoint:** Customer Support history now uses labelled request cards, machine-readable saved, updated and reply timestamps, and explicitly names replies as customer-visible. Empty history copy now uses the same customer-visible language as the operator view. Portal support records remain local portal records, not external delivery proof or response-time commitments.
+
+**Phase F28 — account deletion evidence checkpoint:** The account deletion panel exposes its scheduled processing time with a machine-readable timestamp and lists blocking reasons when processing is paused. The existing 30-day cancellation, active-obligation blockers and confirmation dialog remain unchanged.
+
+**Phase F29 — restock alert semantics checkpoint:** Replenishment alerts announce recent and unread counts, label each alert from its heading, expose created and scheduled reminder dates as machine-readable timestamps, and associate the mark-read action with the alert it changes. Reminders still cannot place orders or send retailer data.
+
+**Phase F30 — operator role-state checkpoint:** Operator access management now separates lookup and save busy/error states and announces the currently selected roles before a superadmin confirms a change. Server-side superadmin, CSRF/origin, revision, live revocation and audit controls remain authoritative.
+
+**Phase F31 — verification port isolation checkpoint:** The production web proxy journey now uses temporary loopback ports and rewrites its generated local proxy manifest to the test API for that run. It no longer requires stopping an existing local demo/API listener on port 3100, and it still avoids live services or production configuration.
+
+**Phase F32 — independent reminder actions checkpoint:** Replenishment saves, seven-day reminder moves, reminder removals and alert mark-read actions now expose busy state only on the action being saved. An unrelated reminder or alert action no longer disables the rest of the page.
+
+**Phase F33 — shared character-count checkpoint:** Support guidance, Support request details and operator customer replies now use a shared polite, atomic character-count component. Existing server-side length validation remains authoritative.
+
+**Phase F34 — safe retry control checkpoint:** Shared loading-error retry controls now use explicit button type semantics so retry actions cannot accidentally submit a surrounding form.
+
+**Phase F35 — invited-access action-state checkpoint:** Guest invitation acceptance, creation and revocation now expose action-specific busy state. Revoking one invitation no longer disables every invitation row, invitation expiry uses machine-readable timestamps, and create/accept controls use explicit button types. Profile, billing and administration isolation remain unchanged.
+
+**Phase F36 — routine feedback action-state checkpoint:** My Skin routine check-in feedback now scopes busy state to the selected feedback option. Saving one check-in no longer disables the other feedback choices; server-side revision and feedback validation remain authoritative.
+
+**Phase F37 — retailer save action-state checkpoint:** Retailer save and unsave controls now scope busy state to the destination being saved. Saving one retailer no longer disables every save button, while saved-list loading or error states still block all save changes.
+
+**Phase F38 — Skin Coach composer semantics checkpoint:** Skin Coach now uses the shared polite, atomic character-count component for its question composer and marks its submit control explicitly. The existing reviewed-library, consent, sign-in and no-diagnosis boundaries remain unchanged.
+
+**Phase F39 — account action-specific status checkpoint:** Account sign-in, verification, sign-out, profile-merge and deletion confirmation actions now track the active account action and show action-specific progress labels. The server-owned auth, merge-conflict, deletion-window and account-export controls remain authoritative.
+
+**Phase F40 — invited-access expiry evidence checkpoint:** Accepted guest access now uses the shared timestamp helper for its access end date. Invitation creation, acceptance, revocation, profile privacy, billing isolation and administration isolation remain unchanged.
+
+**Phase F41 — subscription renewal evidence checkpoint:** Subscription access and current-period dates now use shared machine-readable timestamps, and renewal refresh, choice, confirmation and back controls declare button behavior explicitly. Renewal requests remain confirmation-gated and server-owned.
+
+**Phase F42 — draft-plan billing action-state checkpoint:** Plans & Billing now tracks checkout discard, billing portal, trial-cycle and checkout actions separately, with action-specific progress labels and explicit button types. Enrollment remains closed unless approved pricing, terms, configuration and consent are present.
+
+**Phase F43 — billing activity semantics checkpoint:** Confirmed billing activity now uses the shared timestamp helper and the refresh control is explicitly non-submit. Activity remains evidence of confirmed portal updates, not proof of external invoices or receipts.
+
+**Phase F44 — reusable command button semantics checkpoint:** Coach quick intents and diff actions, Shop checkout, library clear-search and the app error retry control now declare button behavior explicitly. Existing proposed-change, checkout, reviewed-library and error-recovery behavior remains unchanged.
+
+**Phase F45 — AI reservation audit evidence checkpoint:** Admin AI spending reservations and recent reconciliations now keep created and reconciled dates as machine-readable timestamps, and AI analysis/reconciliation submit controls declare submit behavior explicitly. Budget enforcement, provider reconciliation and operator authorization remain server-owned.
+
+**Phase F46 — beauty profile note-count checkpoint:** Beauty & Style personal notes now use the shared polite, atomic character-count component and the save control declares submit behavior explicitly. Preference-only styling guidance remains unchanged and does not add photo analysis or live AI assessment.
+
+**Phase F47 — Skin Match and Routine safe-control checkpoint:** Skin Match review save/back controls and Routine retry/simplify controls now declare button behavior explicitly. Revision checks, consent, profile persistence and simplify confirmation remain unchanged.
+
+**Phase F48 — retailer retry and listing evidence checkpoint:** Saved-retailer retry controls now declare non-submit behavior, and retailer checked dates use machine-readable timestamps. Retailer visits, saved-list state, comparison limits and no-referral/no-order boundaries remain unchanged.
+
+**Phase F49 — replenishment submit semantics checkpoint:** The reminder create/update control now declares submit behavior explicitly. Reminder validation, due-date limits, reminder removal and non-purchase behavior remain unchanged.
+
+**Phase F50 — operator-access submit semantics checkpoint:** Operator lookup and role-save controls now declare submit behavior explicitly. Superadmin-only access, revision checks, confirmation and audit recording remain server-owned.
+
+**Phase F51 — membership date evidence checkpoint:** Plans & Billing trial and current-period dates now use the shared timestamp helper. Draft enrollment, recurring consent, checkout configuration and billing-service confirmation remain unchanged.
+
+**Phase F52 — admin analysis question-count checkpoint:** Portal AI analysis questions now use the shared polite, atomic character-count component. Consent, operator authorization, no-customer-data guidance and server-side daily limits remain unchanged.
+
+**Phase F53 — knowledge and rule action-state checkpoint:** Knowledge and rule draft/approval operations now track the active draft or approval action before showing progress labels. SME approval, separation of duties, provenance and server validation remain authoritative.
+
+**Phase F54 — admin primitive audit timestamp checkpoint:** The shared admin audit trail now renders action timestamps with machine-readable values. Audit entries remain immutable evidence of recorded operator actions.
+
+**Phase F55 — support subject-count checkpoint:** Customer Support request subjects now use the shared polite, atomic character-count component. Detail length validation, local request storage and external-delivery boundary remain unchanged.
+
+**Phase F56 — Skin Match consent lock checkpoint:** Skin Match review consent is disabled while the profile save is in progress. Revision checks, consent requirement and saved-profile routing remain unchanged.
+
+**Phase F57 — final safe-control sweep checkpoint:** The remaining customer/admin controls touched in this pass preserve explicit button roles across retailer, reminder, operator, analysis and audit flows. No production configuration, provider credential, live billing, retailer order or support-delivery claim was added.
+
+**F27–F57 verification:** Full local verification passed at `work/verification/2026-09-27T19-17-38-186Z/report.md`, and the local release checkpoint passed at `work/checkpoints/2026-09-27T19-18-22-861Z/report.md` with production preflight still blocked and the release decision still **NOT READY**. Evidence covered the new customer-history timestamps, account-deletion blockers, restock alert state, independent reminder actions, shared character-count semantics, Skin Coach composer semantics, account action-specific progress, invited-access action state and expiry evidence, subscription renewal date evidence, draft-plan billing action state, billing activity semantics, reusable command button semantics, AI reservation audit timestamps, beauty note-count semantics, Skin Match/Routine safe controls, retailer retry/listing evidence, replenishment submit semantics, operator submit semantics, membership date evidence, admin analysis question counts, knowledge/rule action state, admin primitive audit timestamps, support subject counts, routine feedback action state, retailer save action state, operator reply character count, existing admin support semantics, the production web build, the 29-route proxy journey, root static build and zero-hit public artifact vendor scan. This is local rendered/build/proxy evidence only; deployed keyboard, screen-reader, mobile, browser/device and complete WCAG validation remain required.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

@@ -3,7 +3,7 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {SubscriptionApi,type SubscriptionSnapshot,type PortalSubscription} from '@mgt/shared';
-import {AppFrame} from '../../components/HubFrames';
+import {AppFrame,Timestamp} from '../../components/HubFrames';
 import {hub,session,resetSession} from '../../lib/hub';
 
 const api=new SubscriptionApi('',(...args)=>fetch(...args),async()=>(await session()).csrf);
@@ -54,7 +54,7 @@ export default function SubscriptionPage(){
  return <AppFrame title="Your subscriptions">
   <p className="lead">Review confirmed access and manage renewal from one place.</p>
   <p>New plans and prices are still under review. Demo prices remain USD placeholders; this page cannot enroll you in a new plan.</p>
-  <div className="actions"><button ref={refreshButton} className="button" disabled={loading||busy} onClick={reload}>Refresh status</button><Link className="text-link" href="/account">Account</Link></div>
+  <div className="actions"><button ref={refreshButton} className="button" type="button" disabled={loading||busy} onClick={reload}>Refresh status</button><Link className="text-link" href="/account">Account</Link></div>
   {loading&&<p role="status">Checking your subscriptions…</p>}
   {error&&<p id="subscription-error" className="notice error" role="alert">{error}</p>}
   {notice&&<p className="notice" role="status">{notice}</p>}
@@ -62,25 +62,25 @@ export default function SubscriptionPage(){
   {data&&<>
    <section className="panel" aria-labelledby="access-heading"><h2 id="access-heading">Confirmed access</h2>
     <p>{data.entitlement.premium?'Your paid access is active.':'No active paid access is confirmed.'}</p>
-    {data.entitlement.valid_until&&<p>Current access period ends {new Date(data.entitlement.valid_until).toLocaleString()}.</p>}
+    {data.entitlement.valid_until&&<p>Current access period ends <Timestamp value={data.entitlement.valid_until}/>.</p>}
    </section>
    {!data.subscriptions.length&&<p className="notice">No subscriptions are linked to this signed-in account.</p>}
    {data.subscriptions.map(item=><section className="panel" key={item.id} aria-label={item.audience==='consumer'?'Personal subscription':'Business subscription'}>
     <h2>{item.audience==='consumer'?'Personal subscription':'Business subscription'}</h2>
     <p>Status: <strong>{labels[item.status]}</strong></p>
-    {item.current_period_end&&<p>Current period ends {new Date(item.current_period_end).toLocaleString()}.</p>}
+    {item.current_period_end&&<p>Current period ends <Timestamp value={item.current_period_end}/>.</p>}
     <p>{item.cancel_at_period_end?'Renewal is off. Turning it off does not itself end the current confirmed access period.':'Renewal is not scheduled to stop.'}</p>
     {item.platform_managed?<p className="notice">Manage this subscription in the store where you purchased it. Renewal controls are not available here.</p>:
      item.pending_command?<p className="notice" role="status">A renewal change is awaiting confirmation. Status refreshes automatically for about one minute.</p>:
-     (item.can_cancel||item.can_resume)?<button className="button" disabled={busy||loading||!!choice} onClick={event=>choose(item,event.currentTarget)}>{item.can_cancel?'Turn off renewal':'Resume renewal'}</button>:
+     (item.can_cancel||item.can_resume)?<button className="button" type="button" disabled={busy||loading||!!choice} onClick={event=>choose(item,event.currentTarget)}>{item.can_cancel?'Turn off renewal':'Resume renewal'}</button>:
      <p>Renewal changes are unavailable for this record. Contact support if you need help.</p>}
    </section>)}
   </>}
   {choice&&<section className="panel" aria-labelledby="renewal-confirmation" aria-describedby={error?'subscription-error':'renewal-confirmation-help'} aria-busy={busy}>
    <h2 ref={confirmation} tabIndex={-1} id="renewal-confirmation">{choice.cancel?'Turn off renewal?':'Resume renewal?'}</h2>
    <p id="renewal-confirmation-help">{choice.cancel?'This requests cancellation at the end of the current period, not an immediate refund.':'This requests future renewal on the existing subscription terms. Review your original billing agreement before continuing.'}</p>
-   <div className="actions"><button className="button primary" disabled={busy||loading} onClick={()=>void submit()}>{busy?'Submitting request…':'Confirm request'}</button>
-    <button className="button" disabled={busy} onClick={()=>{setChoice(null);returnFocus();}}>Back</button></div>
+   <div className="actions"><button className="button primary" type="button" disabled={busy||loading} onClick={()=>void submit()}>{busy?'Submitting request…':'Confirm request'}</button>
+    <button className="button" type="button" disabled={busy} onClick={()=>{setChoice(null);returnFocus();}}>Back</button></div>
   </section>}
  </AppFrame>;
 }

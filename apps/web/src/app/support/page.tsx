@@ -2,7 +2,8 @@
 import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {hub,useHub} from '../../lib/hub';
-import {AppFrame,LoadState} from '../../components/HubFrames';
+import {AppFrame,CharacterCount,LoadState} from '../../components/HubFrames';
+import {SupportHistory} from '../../components/CustomerStatusPanels';
 
 type GuideRole='customer_care'|'onboarding'|'routine_guidance'|'product_referral';
 type RequestType='portal_help'|'onboarding'|'routine_guidance'|'product_retailer'|'account_privacy';
@@ -58,13 +59,13 @@ export default function Support(){
     <label className="field">Your question
      <textarea required maxLength={1800} value={question} disabled={guideBusy} aria-describedby={guideError?'guide-count guide-error':'guide-count'} aria-invalid={!!guideError} placeholder="What would you like help with?" onChange={e=>{setQuestion(e.target.value);if(guideError)setGuideError('');}}/>
     </label>
-    <span className="muted" id="guide-count">{question.length} / 1,800 characters</span>
+    <CharacterCount id="guide-count" current={question.length} max={1800}/>
     {reviewed&&<>
      {!session.loading&&!reviewedReady&&<p className="notice">Retailer and payment directions remain available. For reviewed skincare answers, <Link className="text-link" href="/account">sign in →</Link> and use the analysis service when it is available.</p>}
      <label className="check-label"><input type="checkbox" checked={consent} disabled={guideBusy} onChange={e=>setConsent(e.target.checked)}/>Allow the platform analysis service to process this question.</label>
     </>}
     {guideError&&<p id="guide-error" ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
-    <button className="button" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
+    <button className="button" type="submit" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
    {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
@@ -73,11 +74,12 @@ export default function Support(){
   <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" aria-describedby={error?'support-error':undefined} aria-busy={busy} className="panel stack support-form" onSubmit={submit}>
    <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
    <label className="field">Request type<select disabled={busy} value={requestType} onChange={e=>{setRequestType(e.target.value as RequestType);setRequestSource('support_form');}}>{requestTypes.map(([value,title])=><option key={value} value={value}>{title}</option>)}</select></label>
-   <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
+   <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" aria-describedby="support-subject-count" onChange={e=>setSubject(e.target.value)}/></label>
+   <CharacterCount id="support-subject-count" current={subject.length} max={150}/>
    <label className="field">Details<textarea required maxLength={4000} disabled={busy} value={message} placeholder="Describe what happened and which portal page you were using." aria-describedby="support-count" onChange={e=>setMessage(e.target.value)}/></label>
-   <span className="muted" id="support-count">{message.length} / 4,000 characters</span>
-   <button className="button primary" disabled={busy||!subject.trim()||!message.trim()}>{busy?'Saving…':'Save request'}</button>
+   <CharacterCount id="support-count" current={message.length} max={4000}/>
+   <button className="button primary" type="submit" disabled={busy||!subject.trim()||!message.trim()}>{busy?'Saving…':'Save request'}</button>
   </form>
-  <section className="support-history" aria-labelledby="requests-heading"><div className="row"><h2 id="requests-heading">Your requests</h2>{!state.loading&&!state.error&&<span className="pill">{state.data?.tickets.length||0} saved</span>}</div><LoadState {...state} retry={state.reload}/>{!state.loading&&!state.error&&<>{state.data?.tickets.map((t:any)=><article className="panel support-ticket" key={t.id}><div className="row"><h3>{t.subject}</h3><span className="pill">{label(String(t.status))}</span></div><p className="muted">{label(String(t.request_type))}</p><p className="muted support-reference">Reference: {t.id}{t.created_at?' · Saved '+new Date(t.created_at).toLocaleString():''}{t.updated_at&&t.updated_at!==t.created_at?' · Updated '+new Date(t.updated_at).toLocaleString():''}</p><p className="support-message">{t.message}</p>{t.replies.length>0?<section className="support-replies" aria-label="Support replies"><h4>Replies</h4>{t.replies.map((r:any,i:number)=><blockquote key={i}><p>{r.text}</p>{r.at&&<small>{new Date(r.at).toLocaleString()}</small>}</blockquote>)}</section>:<p className="muted">No replies yet.</p>}</article>)}{state.data?.tickets.length===0&&<div className="empty"><h3>No requests yet.</h3><p>Requests you save will appear here, together with any replies.</p></div>}</>}</section>
+  <section className="support-history" aria-labelledby="requests-heading"><div className="row"><h2 id="requests-heading">Your requests</h2>{!state.loading&&!state.error&&<span className="pill">{state.data?.tickets.length||0} saved</span>}</div><LoadState {...state} retry={state.reload}/>{!state.loading&&!state.error&&<>{state.data?.tickets.length?<SupportHistory tickets={state.data.tickets}/>:<div className="empty"><h3>No requests yet.</h3><p>Requests you save will appear here, together with any customer-visible replies.</p></div>}</>}</section>
  </AppFrame>;
 }

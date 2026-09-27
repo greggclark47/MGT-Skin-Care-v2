@@ -85,7 +85,7 @@ export function ShopView({ cart, pricing, productName, isPremiumMember, onChecko
             </p>
           )}
 
-          <button onClick={onCheckout} disabled={checkoutBusy} data-testid="checkout"
+          <button type="button" onClick={onCheckout} disabled={checkoutBusy} data-testid="checkout"
             style={{ width: '100%', minHeight: TAP_TARGET_MIN, marginTop: space.lg, cursor: 'pointer',
                      borderRadius: radius.pill, border: 'none', background: color.accent, color: '#fff',
                      fontFamily: font.family, fontSize: font.size.md, fontWeight: font.weight.semibold,

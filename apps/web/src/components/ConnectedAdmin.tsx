@@ -2,7 +2,7 @@
 
 import React, { useId, useState } from 'react';
 import { hub, useHub } from '../lib/hub';
-import { LoadState } from './HubFrames';
+import { CharacterCount, LoadState, Timestamp } from './HubFrames';
 
 type Metric = [label: string, value: React.ReactNode];
 type SupportTicket = {
@@ -19,16 +19,6 @@ type SupportTicket = {
 };
 
 const label = (value: string) => value.replace(/_/g, ' ');
-const readableDate = (value?: string | null) => {
-  if (!value) return 'Unknown';
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? 'Unknown' : parsed.toLocaleString();
-};
-
-function Timestamp({ value }: { value?: string | null }) {
-  return value ? <time dateTime={value}>{readableDate(value)}</time> : <>Unknown</>;
-}
-
 export function MetricSummary({ label: summaryLabel, items }: { label: string; items: Metric[] }) {
   return <dl className="skin-overview" aria-label={summaryLabel}>{items.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>;
 }
@@ -118,7 +108,7 @@ export function SupportTicketEditor({ ticket, onSaved }: { ticket: SupportTicket
   const [message, setMessage] = useState('');
   const [replyInvalid, setReplyInvalid] = useState(false);
   const replyRequired = status !== 'in_review';
-  const helpId = `${formId}-help`, errorId = `${formId}-error`, messageId = `${formId}-message`;
+  const helpId = `${formId}-help`, replyCountId = `${formId}-reply-count`, errorId = `${formId}-error`, messageId = `${formId}-message`;
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const customerReply = reply.trim();
@@ -134,12 +124,13 @@ export function SupportTicketEditor({ ticket, onSaved }: { ticket: SupportTicket
     } catch (err) { setReplyInvalid(false); setError((err as Error).message); }
     finally { setBusy(false); }
   }
-  const describedBy = [helpId, error ? errorId : '', message ? messageId : ''].filter(Boolean).join(' ');
+  const describedBy = [helpId, replyCountId, error ? errorId : '', message ? messageId : ''].filter(Boolean).join(' ');
   return <form className="stack support-update" aria-busy={busy} aria-describedby={describedBy} onSubmit={submit} noValidate>
     <p id={helpId} className="muted">A reply is required for Open, Waiting for customer, and Resolved. In review may be saved without a customer message.</p>
     <label className="field">Request status<select name="status" value={status} disabled={busy} onChange={event => { setStatus(event.target.value); setReplyInvalid(false); setError(''); setMessage(''); }}><option value="open">Open</option><option value="in_review">In review</option><option value="waiting_customer">Waiting for customer</option><option value="closed">Resolved</option></select></label>
     <label className="field">Escalation reason<select name="escalation_reason" value={escalationReason} disabled={busy} onChange={event => { setEscalationReason(event.target.value); setError(''); setMessage(''); }}><option value="none">No escalation</option><option value="content_safety">Content safety</option><option value="account_privacy">Account or privacy</option><option value="billing_scope">Billing scope</option><option value="retailer_purchase">Retailer purchase</option><option value="technical_issue">Technical issue</option><option value="specialist_review">Specialist review</option><option value="other">Other</option></select></label>
     <label className="field">Customer reply {replyRequired && <span aria-hidden="true">(required)</span>}<textarea name="reply" value={reply} maxLength={4000} required={replyRequired} disabled={busy} aria-invalid={replyInvalid} aria-describedby={describedBy} placeholder={replyRequired ? 'Tell the customer what changed or what you need next.' : 'Optional while the request is under internal review.'} onChange={event => { setReply(event.target.value); setReplyInvalid(false); setError(''); setMessage(''); }}/></label>
+    <CharacterCount id={replyCountId} current={reply.length} max={4000}/>
     {error && <p id={errorId} role="alert" className="notice error">{error}</p>}{message && <p id={messageId} role="status" className="notice success">{message}</p>}
     <button className="button" type="submit" disabled={busy}>{busy ? 'Updating request…' : 'Update request'}</button>
   </form>;
@@ -163,8 +154,9 @@ export function AuditTable({ entries }: { entries: Array<{ id: string; action: s
 
 export function ConnectedAdmin({ kind }: { kind: 'knowledge' | 'rule' | 'operations' }) {
   const state = useHub('/admin'), session = useHub('/session');
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
-  async function save(path: string, body: unknown) { setBusy(true); setError(''); setMessage(''); try { await hub(path, body); state.reload(); setMessage('Saved.'); } catch (err) { setError((err as Error).message); } finally { setBusy(false); } }
+  const [busyKey, setBusyKey] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState('');
+  const busy = busyKey !== '';
+  async function save(path: string, body: unknown, key: string) { setBusyKey(key); setError(''); setMessage(''); try { await hub(path, body); state.reload(); setMessage('Saved.'); } catch (err) { setError((err as Error).message); } finally { setBusyKey(''); } }
   const data = state.data, roles: string[] = data?.roles || [];
   const canDraft = kind === 'knowledge' ? roles.some(role => ['superadmin', 'sme', 'catalog_editor'].includes(role)) : roles.some(role => ['superadmin', 'sme'].includes(role));
   const supportOperator = roles.some(role => ['superadmin', 'compliance'].includes(role));
@@ -180,8 +172,8 @@ export function ConnectedAdmin({ kind }: { kind: 'knowledge' | 'rule' | 'operati
       </section>
       <section aria-labelledby="recent-audit-heading"><h2 id="recent-audit-heading">Recent audit activity</h2><AuditTable entries={data.audit}/></section>
     </> : <>
-      {canDraft && <form className="panel stack" aria-busy={busy} aria-describedby={error ? 'admin-save-error' : message ? 'admin-save-message' : undefined} onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); const body = Object.fromEntries(form); void save('/admin/' + kind, kind === 'rule' ? { ...body, sensitivity_ceiling_required: Number(form.get('sensitivity_ceiling_required')) } : body); }}><h2>Create a draft</h2>{(kind === 'knowledge' ? ['title', 'source_url', 'body'] : ['ingredient_key', 'display_name', 'sensitivity_ceiling_required', 'rationale']).map(field => <label className="field" key={field}>{label(field)}{['body', 'rationale'].includes(field) ? <textarea required name={field} disabled={busy} maxLength={field === 'body' ? 4000 : 1000} onChange={() => setError('')}/> : <input required name={field} disabled={busy} type={field === 'source_url' ? 'url' : field === 'sensitivity_ceiling_required' ? 'number' : 'text'} step={field === 'sensitivity_ceiling_required' ? '.01' : undefined} min={field === 'sensitivity_ceiling_required' ? 0 : undefined} max={field === 'sensitivity_ceiling_required' ? 1 : undefined} onChange={() => setError('')}/>}</label>)}<button className="button primary" type="submit" disabled={busy}>{busy ? 'Saving draft…' : 'Save draft'}</button></form>}
-      {(kind === 'knowledge' ? data.knowledge : data.rules).map((item: any) => <article className="panel" key={item.id || item.ingredient_key}><div className="row"><h3>{item.title || item.display_name}</h3><span className="pill">{item.status}</span></div><p style={{ whiteSpace: 'pre-wrap' }}>{item.body || item.rationale}</p>{item.status !== 'approved' && !item.sample && roles.includes('sme') && item.author_id !== session.data?.account?.id && <button className="button" type="button" disabled={busy} onClick={() => void save('/admin/' + kind + '/approve', kind === 'knowledge' ? { id: item.id } : { ingredient_key: item.ingredient_key })}>{busy ? 'Approving…' : 'Approve reviewed draft'}</button>}</article>)}
+      {canDraft && <form className="panel stack" aria-busy={busyKey === `draft-${kind}`} aria-describedby={error ? 'admin-save-error' : message ? 'admin-save-message' : undefined} onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); const body = Object.fromEntries(form); void save('/admin/' + kind, kind === 'rule' ? { ...body, sensitivity_ceiling_required: Number(form.get('sensitivity_ceiling_required')) } : body, `draft-${kind}`); }}><h2>Create a draft</h2>{(kind === 'knowledge' ? ['title', 'source_url', 'body'] : ['ingredient_key', 'display_name', 'sensitivity_ceiling_required', 'rationale']).map(field => <label className="field" key={field}>{label(field)}{['body', 'rationale'].includes(field) ? <textarea required name={field} disabled={busy} maxLength={field === 'body' ? 4000 : 1000} onChange={() => setError('')}/> : <input required name={field} disabled={busy} type={field === 'source_url' ? 'url' : field === 'sensitivity_ceiling_required' ? 'number' : 'text'} step={field === 'sensitivity_ceiling_required' ? '.01' : undefined} min={field === 'sensitivity_ceiling_required' ? 0 : undefined} max={field === 'sensitivity_ceiling_required' ? 1 : undefined} onChange={() => setError('')}/>}</label>)}<button className="button primary" type="submit" disabled={busy}>{busyKey === `draft-${kind}` ? 'Saving draft…' : 'Save draft'}</button></form>}
+      {(kind === 'knowledge' ? data.knowledge : data.rules).map((item: any) => { const itemKey = item.id || item.ingredient_key, approveBusy = busyKey === `approve-${itemKey}`; return <article className="panel" key={itemKey}><div className="row"><h3>{item.title || item.display_name}</h3><span className="pill">{item.status}</span></div><p style={{ whiteSpace: 'pre-wrap' }}>{item.body || item.rationale}</p>{item.status !== 'approved' && !item.sample && roles.includes('sme') && item.author_id !== session.data?.account?.id && <button className="button" type="button" disabled={busy} onClick={() => void save('/admin/' + kind + '/approve', kind === 'knowledge' ? { id: item.id } : { ingredient_key: item.ingredient_key }, `approve-${itemKey}`)}>{approveBusy ? 'Approving…' : 'Approve reviewed draft'}</button>}</article>; })}
     </>}</>}
   </>;
 }
