@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readShopState,updateShopUrl,shareShopUrl} from '../lib/shop-state';
+const listings=[{id:'a',region:'US',specialty:'Hair',segments:['hair']},{id:'b',region:'EU',specialty:'Skin',segments:['skin']},{id:'c',region:'US',specialty:'Skin',segments:['skin']},{id:'d',region:'US',specialty:'Skin',segments:['skin']}];
+const segments=[{id:'hair'},{id:'skin'}];
+const href='https://shop.example/saved?q=curly+%26+coily&region=US&specialty=Hair&segment=hair&compare=a,b&unrelated=secret';
+const shared=shareShopUrl(href);
+assert.equal(new URL(shared).pathname,'/shop');assert.equal(new URL(shared).searchParams.has('unrelated'),false);
+assert.deepEqual(readShopState(new URL(shared).search,listings,segments),{query:'curly & coily',region:'US',specialty:'Hair',segment:'hair',compare:['a','b']});
+const cleared=updateShopUrl(href,{q:'',region:'All',specialty:'All',segment:'all'});
+assert.equal(cleared.searchParams.get('compare'),'a,b');assert.equal(cleared.searchParams.has('q'),false);
+const invalid=readShopState('?region=nowhere&segment=missing&specialty=missing&compare=unknown,a,a,b,c,d',listings,segments);
+assert.deepEqual(invalid,{query:'',region:'All',specialty:'All',segment:'all',compare:['a','b','c']});
+assert.equal(readShopState('?segment=skin&specialty=Hair',listings,segments).specialty,'All');
+assert.equal(new URL(shareShopUrl(href,['c'])).searchParams.get('compare'),'c');
+assert.equal(new URL(shareShopUrl(href,[])).searchParams.has('compare'),false);
+console.log('Shop state checks passed: share/restore, encoding, filter clearing, invalid filters, and comparison limits.');

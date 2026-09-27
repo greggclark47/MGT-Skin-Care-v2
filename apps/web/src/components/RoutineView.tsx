@@ -1,0 +1,18 @@
+'use client';
+import React,{useState} from 'react';
+import type {Routine,RoutineStep} from '@mgt/domain';
+type TabId='am'|'pm'|'weekly';
+const TABS:{id:TabId;label:string}[]=[{id:'am',label:'Morning'},{id:'pm',label:'Evening'},{id:'weekly',label:'Weekly'}];
+export function stepsForTab(routine:Routine,tab:TabId):RoutineStep[]{return routine.steps.filter(s=>tab==='weekly'?s.time==='weekly':s.time===tab||s.time==='am_pm').sort((a,b)=>a.order-b.order);}
+export interface RoutineViewProps{routine:Routine;productName:(id:string)=>string;onMode?:(mode:'simplify'|'cheapen'|'travel')=>void;onSwap?:(step:RoutineStep)=>void;busyMode?:string|null;}
+export function RoutineView({routine,productName,onMode,onSwap,busyMode}:RoutineViewProps){
+ const [tab,setTab]=useState<TabId>('am');const steps=stepsForTab(routine,tab);
+ const selected=TABS.find(t=>t.id===tab)!;
+ return <div className={'routine-workspace routine-'+tab} data-testid="routine-view">
+ <div className="routine-heading"><div><span className="eyebrow">DAILY CARE</span><h2>Your routine steps</h2></div><span className="routine-count" aria-live="polite">{steps.length} {steps.length===1?'step':'steps'}</span></div>
+ <div className="routine-tabs" role="tablist" aria-label="Routine time of day">{TABS.map((t,index)=><button type="button" key={t.id} role="tab" id={`routine-tab-${t.id}`} aria-controls="routine-panel" tabIndex={tab===t.id?0:-1} aria-selected={tab===t.id} data-testid={`tab-${t.id}`} onClick={()=>setTab(t.id)} onKeyDown={event=>{let next=index;if(event.key==='ArrowRight')next=(index+1)%TABS.length;else if(event.key==='ArrowLeft')next=(index+TABS.length-1)%TABS.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=TABS.length-1;else return;event.preventDefault();setTab(TABS[next].id);document.getElementById(`routine-tab-${TABS[next].id}`)?.focus();}}>{t.label}<span className="routine-tab-count" aria-label={`${stepsForTab(routine,t.id).length} steps`}>{stepsForTab(routine,t.id).length}</span></button>)}</div>
+ <div key={tab} className="route-enter" id="routine-panel" aria-labelledby={`routine-tab-${tab}`} tabIndex={0} role="tabpanel"><p className="routine-caption">{selected.label} · follow your saved step order.</p>
+ <ol className="routine-steps" data-testid="routine-steps">{steps.length===0?<li className="routine-empty" data-testid="empty-tab">Nothing scheduled for this part of your routine.</li>:steps.map((step,i)=><li className="routine-step" key={`${step.slot}-${step.product_id}`}><span className="routine-step-number" aria-hidden="true">{String(i+1).padStart(2,'0')}</span><div className="routine-step-body"><div className="routine-step-meta"><span>{step.slot.replace(/_/g,' ')}</span>{step.is_optional&&<span className="routine-optional">optional</span>}</div><h3>{productName(step.product_id)}</h3><p className="routine-frequency">{step.frequency.replace(/_/g,' ')}</p>{step.conflict_notes.map(note=><p key={note} className="routine-caution" data-testid="conflict-note"><strong>Pairing note</strong>{note}</p>)}</div>{onSwap&&<button type="button" className="button small routine-swap" disabled={!!busyMode} onClick={()=>onSwap(step)} data-testid={`swap-${step.slot}`} aria-label={`Swap ${productName(step.product_id)}`}>Swap</button>}</li>)}</ol></div>
+ {onMode&&<section className="routine-modes" aria-labelledby="modes-heading"><h2 id="modes-heading">Adjust my routine</h2><div className="actions">{([{id:'simplify',label:'Make it simpler'},{id:'cheapen',label:'Make it cheaper'},{id:'travel',label:"I'm travelling"}] as const).map(m=><button type="button" className="button small" key={m.id} disabled={!!busyMode} onClick={()=>onMode(m.id)} data-testid={`mode-${m.id}`}>{busyMode===m.id?'Working…':m.label}</button>)}</div></section>}
+ </div>;
+}

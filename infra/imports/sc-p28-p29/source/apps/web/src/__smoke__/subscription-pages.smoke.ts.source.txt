@@ -1,0 +1,339 @@
+// apps/web/src/__smoke__/subscription-pages.smoke.ts — SC-P29
+//
+// Two things, in the shape this project already uses:
+//
+// 1. CLIENT REQUEST SHAPE, exactly like the SC-P15 entitlement/referral suite: does
+//    SubscriptionApi build the right request? Not "does the server behave" — that is
+//    the SC-P28 server suite's job and is already proven there.
+// 2. PRESENTATION DECISIONS, as pure functions: which actions a row offers, what the
+//    copy says, and — the one that matters most — that no state except confirmed
+//    premium ever claims success.
+//
+// Run: npx tsx apps/web/src/__smoke__/subscription-pages.smoke.ts
+// Status at time of upload: 55/55 checks passing, tsc --strict clean.
+
+import { SubscriptionApi, SubscriptionApiError } from '../../../../packages/shared/src/subscription-api';
+import {
+  classifyLanding,
+  describeSubscription,
+  nextPollState,
+  pollCopy,
+  ENTITLEMENT_POLL_TIMEOUT_MS,
+  PENDING_ORDER_KEY,
+  PENDING_SUBSCRIPTION_KEY,
+  type PollState,
+  type SubscriptionLike,
+} from '../lib/subscription-state';
+
+let passed = 0;
+const failures: string[] = [];
+
+function check(name: string, cond: boolean, detail?: unknown): void {
+  if (cond) passed += 1;
+  else failures.push(`${name}${detail === undefined ? '' : ` — got ${JSON.stringify(detail)}`}`);
+}
+
+// ── fetch double, same pattern as the SC-P15 suite ──────────────────────────────
+
+interface Captured {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  body: unknown;
+}
+
+function fakeFetch(response: unknown = {}, ok = true, status = 200) {
+  const calls: Captured[] = [];
+  const impl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+    const headers: Record<string, string> = {};
+    if (init.headers) {
+      for (const [k, v] of Object.entries(init.headers as Record<string, string>)) {
+        headers[k.toLowerCase()] = v;
+      }
+    }
+    calls.push({
+      url: String(url),
+      method: init.method ?? 'GET',
+      headers,
+      body: init.body ? JSON.parse(init.body as string) : undefined,
+    });
+    return { ok, status, json: async () => response } as Response;
+  }) as unknown as typeof fetch;
+  return { impl, calls };
+}
+
+function makeSub(over: Partial<SubscriptionLike> = {}): SubscriptionLike {
+  return {
+    id: 'sub_1',
+    provider: 'stripe',
+    status: 'active',
+    current_period_end: '2027-01-15T00:00:00Z',
+    price_id: 'price_premium_monthly',
+    cancel_at_period_end: false,
+    platform_managed: false,
+    ...over,
+  };
+}
+
+class FakeStorage {
+  constructor(private map: Record<string, string> = {}) {}
+  getItem(k: string) {
+    return this.map[k] ?? null;
+  }
+  removeItem(k: string) {
+    delete this.map[k];
+  }
+}
+
+async function main(): Promise<void> {
+  // ══ 1. Client request shape ═══════════════════════════════════════════════════
+
+  {
+    const { impl, calls } = fakeFetch({ subscriptions: [], entitlement: { premium: false } });
+    await new SubscriptionApi('http://x', impl).withUser('user_a').list();
+    check('list() GETs the versioned path', calls[0].url === 'http://x/api/v1/subscriptions', calls[0].url);
+    check('list() is a GET', calls[0].method === 'GET', calls[0].method);
+    check('the bound user travels as x-user-id', calls[0].headers['x-user-id'] === 'user_a', calls[0].headers);
+    check('a GET sends no content-type', calls[0].headers['content-type'] === undefined, calls[0].headers);
+  }
+
+  {
+    // The id is account-scoped, so an unbound client must not silently send an
+    // unauthenticated request that reads as "you have nothing."
+    const { impl, calls } = fakeFetch({ subscriptions: [], entitlement: { premium: false } });
+    await new SubscriptionApi('http://x', impl).list();
+    check('an unbound client sends no x-user-id at all', calls[0].headers['x-user-id'] === undefined, calls[0].headers);
+  }
+
+  {
+    const { impl, calls } = fakeFetch({ subscription: makeSub() });
+    await new SubscriptionApi('http://x', impl).withUser('u').get('sub id/with slashes');
+    check(
+      'an id needing encoding is encoded, not interpolated raw',
+      calls[0].url.includes(encodeURIComponent('sub id/with slashes')),
+      calls[0].url,
+    );
+    // Assert the thing that actually matters: no un-encoded separator survives into
+    // the path segment, so the id cannot escape into a different route. (First draft
+    // of this check asserted the URL didn't END with 'slashes' — which the correctly
+    // encoded URL does, since only the separators get escaped. The matcher was wrong,
+    // not the client.)
+    const segment = calls[0].url.split('/api/v1/subscriptions/')[1];
+    check('no un-encoded separator survives into the id segment', !segment.includes('/'), segment);
+    check('the space is percent-encoded too', segment.includes('%20'), segment);
+  }
+
+  {
+    const { impl, calls } = fakeFetch({ checkout: { id: 'cs_1', url: 'https://x/c', client_secret: null }, status: 'pending_payment' });
+    await new SubscriptionApi('http://x', impl).withUser('u').startCheckout('price_abc');
+    check('startCheckout POSTs', calls[0].method === 'POST', calls[0].method);
+    check('startCheckout carries price_id', (calls[0].body as Record<string, unknown>)?.price_id === 'price_abc', calls[0].body);
+    check('startCheckout omits subscription_id when not upgrading', !('subscription_id' in (calls[0].body as object)), calls[0].body);
+  }
+
+  {
+    const { impl, calls } = fakeFetch({ subscription: makeSub(), access_until: '2027-01-15T00:00:00Z' });
+    await new SubscriptionApi('http://x', impl).withUser('u').cancel('sub_1', true);
+    check('cancel() is a DELETE', calls[0].method === 'DELETE', calls[0].method);
+    check('cancel() states cancel_at_period_end explicitly', (calls[0].body as Record<string, unknown>)?.cancel_at_period_end === true, calls[0].body);
+  }
+
+  {
+    const { impl, calls } = fakeFetch({ subscription: makeSub(), access_until: '2027-01-15T00:00:00Z' });
+    await new SubscriptionApi('http://x', impl).withUser('u').cancel('sub_1', false);
+    check('resume sends cancel_at_period_end: false on the same route', (calls[0].body as Record<string, unknown>)?.cancel_at_period_end === false, calls[0].body);
+  }
+
+  {
+    const { impl } = fakeFetch({ error: { code: 'unauthenticated', message: 'Sign in.' } }, false, 401);
+    let caught: unknown = null;
+    try {
+      await new SubscriptionApi('http://x', impl).list();
+    } catch (err) {
+      caught = err;
+    }
+    check('a non-2xx rejects rather than resolving with error JSON', caught instanceof SubscriptionApiError, caught);
+    check('the envelope code reaches the caller', (caught as SubscriptionApiError)?.code === 'unauthenticated', caught);
+  }
+
+  {
+    const { impl } = fakeFetch(
+      {
+        error: {
+          code: 'platform_managed',
+          message: 'Billed by Apple or Google.',
+          manage_urls: { ios: 'https://apple', android: 'https://google' },
+        },
+      },
+      false,
+      409,
+    );
+    let caught: SubscriptionApiError | null = null;
+    try {
+      await new SubscriptionApi('http://x', impl).withUser('u').cancel('sub_rc');
+    } catch (err) {
+      caught = err as SubscriptionApiError;
+    }
+    check('a 409 surfaces as platform_managed', caught?.code === 'platform_managed', caught?.code);
+    check('the manage URLs survive to the caller', caught?.manageUrls?.ios === 'https://apple', caught?.manageUrls);
+  }
+
+  {
+    // A gateway that returns HTML must not crash the client before it can report the
+    // status — the status is the useful part.
+    const impl = (async () => {
+      return {
+        ok: false,
+        status: 502,
+        json: async () => {
+          throw new Error('not json');
+        },
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+    let caught: SubscriptionApiError | null = null;
+    try {
+      await new SubscriptionApi('http://x', impl).list();
+    } catch (err) {
+      caught = err as SubscriptionApiError;
+    }
+    check('an unparseable error body still rejects with the real status', caught?.status === 502, caught?.status);
+    check('an unparseable error body gets a fallback code, not a crash', caught?.code === 'unknown_error', caught?.code);
+  }
+
+  // ══ 2. Platform-managed rows offer no action we cannot perform ════════════════
+
+  for (const status of ['active', 'trialing', 'past_due'] as const) {
+    const view = describeSubscription(makeSub({ status, platform_managed: true, provider: 'revenuecat' }));
+    check(`platform-managed (${status}) offers no cancel button`, view.actions.canCancel === false, view.actions);
+    check(`platform-managed (${status}) offers no plan change`, view.actions.canChangePlan === false, view.actions);
+    check(`platform-managed (${status}) is flagged as managed elsewhere`, view.actions.managedElsewhere === true, view.actions);
+    check(
+      `platform-managed (${status}) says plainly that we cannot do it`,
+      /can't make them for you|app store/i.test(view.detail),
+      view.detail,
+    );
+  }
+
+  // ══ 3. A scheduled cancel is explained, not just recorded ═════════════════════
+
+  {
+    const view = describeSubscription(makeSub({ cancel_at_period_end: true }));
+    check('a scheduled cancel offers resume', view.actions.canResume === true, view.actions);
+    check('a scheduled cancel does not offer cancel again', view.actions.canCancel === false, view.actions);
+    check('it names the date access actually ends', view.headline.includes('2027') || view.detail.includes('2027'), view);
+    check('it says nothing more will be charged', /nothing more will be charged/i.test(view.detail), view.detail);
+  }
+
+  // ══ 4. A failed payment is stated without alarm or blame ══════════════════════
+
+  {
+    const view = describeSubscription(makeSub({ status: 'past_due' }));
+    check('past_due is attention, never an ended/alarm tone', view.tone === 'attention', view.tone);
+    check('past_due still allows a fix', view.actions.canChangePlan === true, view.actions);
+    check('past_due says access continues for now', /stays on/i.test(view.detail), view.detail);
+  }
+
+  // A mechanical scan over EVERY string this module can render. The rule that copy
+  // carries no shame or alarm vocabulary cannot be enforced by a type, so this test
+  // is what keeps it alive — the same device the style vertical's suite uses.
+  {
+    const SHAME = /\b(failed to pay|delinquent|you should have|your fault|overdue account|suspended|locked out|violation)\b/i;
+    const ALARM = /\b(urgent|immediately|warning|alert|danger|act now)\b/i;
+    const states: SubscriptionLike[] = [
+      makeSub(),
+      makeSub({ status: 'trialing' }),
+      makeSub({ status: 'past_due' }),
+      makeSub({ status: 'canceled' }),
+      makeSub({ status: 'unpaid' }),
+      makeSub({ status: 'incomplete' }),
+      makeSub({ cancel_at_period_end: true }),
+      makeSub({ platform_managed: true, provider: 'revenuecat' }),
+      makeSub({ platform_managed: true, provider: 'revenuecat', status: 'canceled' }),
+    ];
+    const all = states.flatMap((s) => {
+      const v = describeSubscription(s);
+      return [v.headline, v.detail];
+    });
+    const pollStates: PollState[] = ['polling', 'premium', 'timeout', 'unknown_landing'];
+    for (const p of pollStates) {
+      const c = pollCopy(p);
+      all.push(c.headline, c.detail);
+    }
+    const shaming = all.filter((s) => SHAME.test(s));
+    const alarming = all.filter((s) => ALARM.test(s));
+    check('no rendered string uses shame vocabulary', shaming.length === 0, shaming);
+    check('no rendered string uses alarm vocabulary', alarming.length === 0, alarming);
+    check('every state produces non-empty copy', all.every((s) => s.trim().length > 0), all.length);
+  }
+
+  // ══ 5. Never claim success the server has not confirmed ═══════════════════════
+
+  {
+    const claiming = (['polling', 'timeout', 'unknown_landing'] as PollState[]).filter(
+      (s) => pollCopy(s).claimsSuccess,
+    );
+    check('only confirmed premium claims success', claiming.length === 0, claiming);
+    check('confirmed premium does claim success', pollCopy('premium').claimsSuccess === true);
+    check(
+      'the timeout copy does not assert the payment failed',
+      !/failed|declined|unsuccessful/i.test(pollCopy('timeout').detail),
+      pollCopy('timeout').detail,
+    );
+    check(
+      'the timeout copy tells the user nothing is lost',
+      /nothing is lost/i.test(pollCopy('timeout').detail),
+      pollCopy('timeout').detail,
+    );
+  }
+
+  // ══ 6. Poll state machine ═════════════════════════════════════════════════════
+
+  check('premium ends the poll', nextPollState({ premium: true, elapsedMs: 0 }) === 'premium');
+  check('not yet premium keeps polling', nextPollState({ premium: false, elapsedMs: 1000 }) === 'polling');
+  check(
+    'past the budget it times out rather than spinning forever',
+    nextPollState({ premium: false, elapsedMs: ENTITLEMENT_POLL_TIMEOUT_MS + 1 }) === 'timeout',
+  );
+  check(
+    'premium wins even past the timeout — a late webhook is still a success',
+    nextPollState({ premium: true, elapsedMs: ENTITLEMENT_POLL_TIMEOUT_MS + 1 }) === 'premium',
+  );
+
+  // ══ 7. Landing classification — no duplicate order-polling page ═══════════════
+
+  {
+    const order = classifyLanding(new FakeStorage({ [PENDING_ORDER_KEY]: 'order_9' }));
+    check('a pending order is classified as an order landing', order.kind === 'order', order);
+    check(
+      'an order landing hands over to /shop/confirm rather than re-implementing it',
+      order.kind === 'order' && order.redirectTo === '/shop/confirm',
+      order,
+    );
+  }
+  {
+    const both = classifyLanding(
+      new FakeStorage({ [PENDING_ORDER_KEY]: 'order_9', [PENDING_SUBSCRIPTION_KEY]: 'cs_1' }),
+    );
+    check('with both pending, the order wins', both.kind === 'order', both);
+  }
+  check(
+    'a pending subscription checkout is a subscription landing',
+    classifyLanding(new FakeStorage({ [PENDING_SUBSCRIPTION_KEY]: 'cs_1' })).kind === 'subscription',
+  );
+  check('an empty session is an unknown landing', classifyLanding(new FakeStorage({})).kind === 'unknown');
+
+  // ── Report ──────────────────────────────────────────────────────────────────
+  const total = passed + failures.length;
+  console.log(`\nsubscription-pages smoke: ${passed}/${total} checks passed`);
+  if (failures.length > 0) {
+    console.error('\nFAILED:');
+    for (const f of failures) console.error(`  ✗ ${f}`);
+    process.exit(1);
+  }
+  console.log('All checks passed.');
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

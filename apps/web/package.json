@@ -1,0 +1,26 @@
+{
+  "name": "@mgt/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "tsc -p tsconfig.smoke.json && node .smoke-build/__smoke__/render.js && node .smoke-build/__smoke__/admin-render.js && node .smoke-build/__smoke__/shop-state.js && node src/__smoke__/hub-client.cjs"
+  },
+  "dependencies": {
+    "@mgt/domain": "workspace:*",
+    "@mgt/shared": "workspace:*",
+    "next": "^15.5.25",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

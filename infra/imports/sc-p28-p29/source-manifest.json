@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "origin": "Google Drive SC-P28 and SC-P29 additions",
+  "github_merge": false,
+  "source_form": "readable source text, normalized LF; not a binary archive",
+  "files": [
+    {
+      "source_id": "1tOTEXGxi1q9snt1TuFcIsYeU5_m3xV19",
+      "source_url": "https://drive.google.com/file/d/1tOTEXGxi1q9snt1TuFcIsYeU5_m3xV19/view?usp=drivesdk",
+      "source_title": "shared-subscription-api.ts (SC-P29 new)",
+      "modified_time": "2026-09-19T16:27:12.706Z",
+      "intended_path": "packages/shared/src/subscription-api.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/packages/shared/src/subscription-api.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1NFV4rRCl5GsN7F7BibUckrq-MNRvf1g1",
+      "source_url": "https://drive.google.com/file/d/1NFV4rRCl5GsN7F7BibUckrq-MNRvf1g1/view?usp=drivesdk",
+      "source_title": "web-smoke-subscription-pages.smoke.ts (SC-P29 new)",
+      "modified_time": "2026-09-19T16:29:28.966Z",
+      "intended_path": "apps/web/src/__smoke__/subscription-pages.smoke.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/web/src/__smoke__/subscription-pages.smoke.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1LqO7oyRgXOLJQ8TmaBR8Hqq0onHFyfU_",
+      "source_url": "https://drive.google.com/file/d/1LqO7oyRgXOLJQ8TmaBR8Hqq0onHFyfU_/view?usp=drivesdk",
+      "source_title": "web-app-subscription-page.tsx (SC-P29 new)",
+      "modified_time": "2026-09-19T16:28:01.696Z",
+      "intended_path": "apps/web/src/app/subscription/page.tsx",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/web/src/app/subscription/page.tsx.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1UEUVXODd60apq10a7AdIXv1JSlpZ3nim",
+      "source_url": "https://drive.google.com/file/d/1UEUVXODd60apq10a7AdIXv1JSlpZ3nim/view?usp=drivesdk",
+      "source_title": "smoke-subscriptions-v1.smoke.ts (SC-P28 new)",
+      "modified_time": "2026-09-19T03:10:10.486Z",
+      "intended_path": "apps/api/src/__smoke__/subscriptions-v1.smoke.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/api/src/__smoke__/subscriptions-v1.smoke.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1fTJ7DgGO4deEj987hZSUt5-FH4TGLW3x",
+      "source_url": "https://drive.google.com/file/d/1fTJ7DgGO4deEj987hZSUt5-FH4TGLW3x/view?usp=drivesdk",
+      "source_title": "modules-subscriptions-router.ts (SC-P28 new)",
+      "modified_time": "2026-09-19T03:09:17.982Z",
+      "intended_path": "apps/api/src/modules/subscriptions/router.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/api/src/modules/subscriptions/router.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1wIwg2EVGRyVt1xYVH1iJXtRZGf39TOVE",
+      "source_url": "https://drive.google.com/file/d/1wIwg2EVGRyVt1xYVH1iJXtRZGf39TOVE/view?usp=drivesdk",
+      "source_title": "routes-v1.ts (SC-P28 new)",
+      "modified_time": "2026-09-19T03:08:37.233Z",
+      "intended_path": "apps/api/src/routes/v1.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/api/src/routes/v1.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1OJmFYY2wOWE0MjUxA0T2vrTf99DS_bz3",
+      "source_url": "https://drive.google.com/file/d/1OJmFYY2wOWE0MjUxA0T2vrTf99DS_bz3/view?usp=drivesdk",
+      "source_title": "persistence-subscription-repository.ts (SC-P28 new)",
+      "modified_time": "2026-09-19T03:08:18.047Z",
+      "intended_path": "apps/api/src/persistence/subscription-repository.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/api/src/persistence/subscription-repository.ts.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1dzxn_xTCyxfivsQWfgx-aFTsFMLyKGmx",
+      "source_url": "https://drive.google.com/file/d/1dzxn_xTCyxfivsQWfgx-aFTsFMLyKGmx/view?usp=drivesdk",
+      "source_title": "web-components-SubscriptionView.tsx (SC-P29 new)",
+      "modified_time": "2026-09-19T16:28:36.558Z",
+      "intended_path": "apps/web/src/components/SubscriptionView.tsx",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/web/src/components/SubscriptionView.tsx.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1UOPxJT2ygXV6Cxbgeh6hct1DM6z7DutN",
+      "source_url": "https://drive.google.com/file/d/1UOPxJT2ygXV6Cxbgeh6hct1DM6z7DutN/view?usp=drivesdk",
+      "source_title": "web-app-checkout-success-page.tsx (SC-P29 new)",
+      "modified_time": "2026-09-19T16:28:18.741Z",
+      "intended_path": "apps/web/src/app/checkout/success/page.tsx",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/web/src/app/checkout/success/page.tsx.source.txt",
+      "status": "reference_only_not_active"
+    },
+    {
+      "source_id": "1ywtLWBFRtb4hR_yBgl3Qcvd7ECI-BNeB",
+      "source_url": "https://drive.google.com/file/d/1ywtLWBFRtb4hR_yBgl3Qcvd7ECI-BNeB/view?usp=drivesdk",
+      "source_title": "web-lib-subscription-state.ts (SC-P29 new)",
+      "modified_time": "2026-09-19T16:27:42.918Z",
+      "intended_path": "apps/web/src/lib/subscription-state.ts",
+      "staged_path": "infra/imports/sc-p28-p29/source/apps/web/src/lib/subscription-state.ts.source.txt",
+      "status": "reference_only_not_active"
+    }
+  ]
+}

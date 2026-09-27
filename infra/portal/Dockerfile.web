@@ -1,0 +1,14 @@
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE}
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+COPY . .
+RUN pnpm install --frozen-lockfile
+ARG PORTAL_API_ORIGIN=http://api:3100
+ENV PORTAL_API_ORIGIN=$PORTAL_API_ORIGIN
+RUN pnpm --filter @mgt/web build
+ENV NODE_ENV=production PORT=3000
+USER node
+WORKDIR /app/apps/web
+EXPOSE 3000
+CMD ["node","node_modules/next/dist/bin/next","start","--hostname","0.0.0.0"]

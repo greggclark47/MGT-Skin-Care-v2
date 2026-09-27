@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.next/
+.next-dev/
+.smoke-build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+work/data/
+work/verification/
+work/checkpoints/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Generated/local artifacts are kept out of the source backup.
+tmp/
+output/
+.pnpm-store/
+*.zip
+MGT-Skin-Care-v2-Production-Status-2026-09-09.*
+MGT-Skin-Care-v2-phase-3-backup-manifest-2026-09-12.md
+*.tsbuildinfo

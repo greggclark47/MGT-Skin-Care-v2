@@ -1,0 +1,145 @@
+// persistence/subscription-repository.ts — SC-P28
+//
+// Sits alongside persistence/repositories.ts (SC-P25) and follows its resolution
+// exactly: Supabase-js end to end, one DB client in server.ts, no raw-`pg` Pool.
+// If punch-list 0.3 later lands on the raw-`pg` layer, THIS class and SC-P25's
+// SupabaseOrderRepository/SupabaseEntitlementRepository are the three to replace —
+// the SubscriptionRepository interface below is what the routes bind to, so the
+// route module does not change when that decision is made.
+//
+// [UNVERIFIED — punch-list 0.5] Column names below are taken from the live
+// SupabaseEntitlementRepository, which selects `source, status, current_period_end`
+// from `subscriptions` and filters `.eq('user_id', ...)`. No live database has been
+// reachable from a build session this month (punch-list 0.2), so these are
+// consistent-with-existing-code, NOT schema-verified. `price_id`,
+// `cancel_at_period_end`, `provider_subscription_id` and `updated_at` are NEW column
+// assumptions introduced by this file and are the ones most likely to be wrong.
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  resolveEntitlement,
+  type BillingProvider,
+  type Entitlement,
+  type SubscriptionRecord,
+} from '../../../../packages/domain/src/engines/entitlement-resolver';
+
+export type SubscriptionStatus = SubscriptionRecord['status'];
+
+/** A subscription row as the API exposes it. Superset of the domain's
+ *  SubscriptionRecord, which deliberately carries only what entitlement needs. */
+export interface SubscriptionDetail {
+  id: string;
+  user_id: string;
+  /** Persisted as `source` (matching SC-P25); named `provider` in the domain resolver. */
+  provider: BillingProvider;
+  status: SubscriptionStatus;
+  current_period_end: string;
+  price_id: string | null;
+  cancel_at_period_end: boolean;
+  provider_subscription_id: string | null;
+  created_at: string;
+}
+
+export interface SubscriptionRepository {
+  listForUser(userId: string): Promise<SubscriptionDetail[]>;
+  getById(userId: string, subscriptionId: string): Promise<SubscriptionDetail | null>;
+  /** Marks cancel-at-period-end. Never deletes: billing history is audit data. */
+  setCancelAtPeriodEnd(userId: string, subscriptionId: string, cancel: boolean): Promise<void>;
+  /** Entitlement resolved from ALL of the user's rows via the domain resolver. */
+  resolveFor(userId: string, now?: Date): Promise<Entitlement>;
+}
+
+const SELECT_COLS =
+  'id, user_id, source, status, current_period_end, price_id, cancel_at_period_end, provider_subscription_id, created_at';
+
+interface SubscriptionRow {
+  id: string;
+  user_id: string;
+  source: BillingProvider | null;
+  status: SubscriptionStatus;
+  current_period_end: string;
+  price_id: string | null;
+  cancel_at_period_end: boolean | null;
+  provider_subscription_id: string | null;
+  created_at: string;
+}
+
+function toDetail(row: SubscriptionRow): SubscriptionDetail {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    // Defaulting a null source to 'stripe' would silently mis-attribute a
+    // platform-managed subscription and let the cancel route try to act on it.
+    // Fail loudly instead — a row with no source is a data bug, not a Stripe row.
+    provider: requireProvider(row),
+    status: row.status,
+    current_period_end: row.current_period_end,
+    price_id: row.price_id ?? null,
+    cancel_at_period_end: row.cancel_at_period_end ?? false,
+    provider_subscription_id: row.provider_subscription_id ?? null,
+    created_at: row.created_at,
+  };
+}
+
+function requireProvider(row: SubscriptionRow): BillingProvider {
+  if (row.source === 'stripe' || row.source === 'revenuecat') return row.source;
+  throw new Error(
+    `subscriptions.id=${row.id} has source=${JSON.stringify(row.source)}; expected 'stripe' or 'revenuecat'.`,
+  );
+}
+
+export class SupabaseSubscriptionRepository implements SubscriptionRepository {
+  constructor(private db: SupabaseClient) {}
+
+  async listForUser(userId: string): Promise<SubscriptionDetail[]> {
+    const { data, error } = await this.db
+      .from('subscriptions')
+      .select(SELECT_COLS)
+      .eq('user_id', userId)
+      .order('current_period_end', { ascending: false });
+    if (error) throw new Error(`SupabaseSubscriptionRepository.listForUser failed: ${error.message}`);
+    return ((data as SubscriptionRow[] | null) ?? []).map(toDetail);
+  }
+
+  async getById(userId: string, subscriptionId: string): Promise<SubscriptionDetail | null> {
+    // user_id is part of the predicate, not checked after the fetch: an ownership
+    // check that happens in application code after a successful read is one `if`
+    // away from being an IDOR.
+    const { data, error } = await this.db
+      .from('subscriptions')
+      .select(SELECT_COLS)
+      .eq('id', subscriptionId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw new Error(`SupabaseSubscriptionRepository.getById failed: ${error.message}`);
+    return data ? toDetail(data as SubscriptionRow) : null;
+  }
+
+  async setCancelAtPeriodEnd(userId: string, subscriptionId: string, cancel: boolean): Promise<void> {
+    const { error } = await this.db
+      .from('subscriptions')
+      .update({ cancel_at_period_end: cancel, updated_at: new Date().toISOString() })
+      .eq('id', subscriptionId)
+      .eq('user_id', userId);
+    if (error) {
+      throw new Error(`SupabaseSubscriptionRepository.setCancelAtPeriodEnd failed: ${error.message}`);
+    }
+  }
+
+  async resolveFor(userId: string, now: Date = new Date()): Promise<Entitlement> {
+    const rows = await this.listForUser(userId);
+    // The whole point of going through the domain resolver: it honours `trialing`
+    // and the 3-day `past_due` grace window, and mirrors the Postgres
+    // recompute_entitlement() function. Filtering `.eq('status','active')` in SQL —
+    // as SC-P25's SupabaseEntitlementRepository.recompute() currently does — drops
+    // trialing users and cuts the grace window off. See the build log.
+    return resolveEntitlement(
+      rows.map((r) => ({
+        provider: r.provider,
+        status: r.status,
+        current_period_end: r.current_period_end,
+      })),
+      now,
+    );
+  }
+}

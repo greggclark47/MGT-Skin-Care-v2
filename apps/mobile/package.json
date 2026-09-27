@@ -1,0 +1,1 @@
+{ "name": "@mgt/mobile", "version": "0.1.0", "private": true, "scripts": { "test:contract": "node --test test/contract.cjs" } }

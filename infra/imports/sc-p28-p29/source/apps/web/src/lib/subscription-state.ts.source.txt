@@ -1,0 +1,222 @@
+// apps/web/src/lib/subscription-state.ts — SC-P29
+//
+// Pure derivation for the subscription and checkout-success screens. Everything a
+// reviewer would want to argue about — which actions a row offers, what the copy
+// says about a failed payment, when polling gives up — lives here rather than inside
+// a component, so the smoke suite can assert it without a renderer. This mirrors what
+// the SC-P15 client-shape suite does for request building: test the decision, not the
+// pixels.
+
+export type BillingProvider = 'stripe' | 'revenuecat';
+
+export interface SubscriptionLike {
+  id: string;
+  provider: BillingProvider;
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
+  current_period_end: string;
+  price_id: string | null;
+  cancel_at_period_end: boolean;
+  platform_managed: boolean;
+}
+
+export interface SubscriptionActions {
+  canChangePlan: boolean;
+  canCancel: boolean;
+  /** Undo a scheduled cancel while the paid period is still running. */
+  canResume: boolean;
+  /** True when Apple or Google owns this subscription and we can only point at them. */
+  managedElsewhere: boolean;
+}
+
+export interface SubscriptionPresentation {
+  /** 'positive' | 'attention' | 'ended' — drives emphasis, never a red alarm state.
+   *  A billing hiccup is not an emergency and should not be styled like one, the same
+   *  reasoning the hair-lift refusal screen uses for amber-not-red. */
+  tone: 'positive' | 'attention' | 'ended';
+  headline: string;
+  detail: string;
+  actions: SubscriptionActions;
+}
+
+export function formatPeriodEnd(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'your next billing date';
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const NO_ACTIONS: SubscriptionActions = {
+  canChangePlan: false,
+  canCancel: false,
+  canResume: false,
+  managedElsewhere: false,
+};
+
+export function describeSubscription(sub: SubscriptionLike): SubscriptionPresentation {
+  const when = formatPeriodEnd(sub.current_period_end);
+
+  // Platform-managed first: it overrides every other branch, because whatever the
+  // status says, the only honest action we can offer is a link to Apple or Google.
+  if (sub.platform_managed) {
+    return {
+      tone: sub.status === 'canceled' ? 'ended' : 'positive',
+      headline:
+        sub.status === 'canceled' ? 'Your Premium subscription has ended' : 'Premium, billed by the app store',
+      detail:
+        sub.status === 'canceled'
+          ? 'You can start again any time from the app store you originally subscribed through.'
+          : `This subscription is billed through Apple or Google. Changes and cancellations happen in their settings — we can't make them for you. Your current period runs to ${when}.`,
+      actions: { ...NO_ACTIONS, managedElsewhere: true },
+    };
+  }
+
+  if (sub.status === 'canceled' || sub.status === 'unpaid') {
+    return {
+      tone: 'ended',
+      headline: 'Your Premium subscription has ended',
+      detail: 'You still have full access to everything in the free plan. You can resubscribe whenever you want.',
+      actions: { ...NO_ACTIONS },
+    };
+  }
+
+  if (sub.status === 'incomplete') {
+    return {
+      tone: 'attention',
+      headline: 'Your subscription is still being set up',
+      detail:
+        "The payment hasn't finished going through yet. This usually takes a moment — refresh in a minute and it should be here.",
+      actions: { ...NO_ACTIONS },
+    };
+  }
+
+  if (sub.status === 'past_due') {
+    return {
+      tone: 'attention',
+      // No shame vocabulary and no threat. States what happened, what still works,
+      // and what fixes it — a declined card is a fact about a card, not about the
+      // person holding it.
+      headline: "We couldn't take the last payment",
+      detail: `Your card didn't go through on the last attempt. Premium stays on for a few days while you sort it out — updating your payment method is usually all it takes. Your period is dated to ${when}.`,
+      actions: { canChangePlan: true, canCancel: true, canResume: false, managedElsewhere: false },
+    };
+  }
+
+  if (sub.cancel_at_period_end) {
+    return {
+      tone: 'attention',
+      headline: 'Premium ends on ' + when,
+      // The point of this screen: cancelling is not instant and saying so plainly is
+      // what stops the "I cancelled, why do I still have it / why was I charged"
+      // support ticket in both directions.
+      detail: `You've cancelled, and you keep everything until ${when}. Nothing more will be charged. If you change your mind before then, you can turn it back on and nothing will have lapsed.`,
+      actions: { canChangePlan: false, canCancel: false, canResume: true, managedElsewhere: false },
+    };
+  }
+
+  if (sub.status === 'trialing') {
+    return {
+      tone: 'positive',
+      headline: "You're on a Premium trial",
+      detail: `Your trial runs to ${when}, and billing starts then unless you cancel before it. You can cancel any time and keep access until that date.`,
+      actions: { canChangePlan: true, canCancel: true, canResume: false, managedElsewhere: false },
+    };
+  }
+
+  return {
+    tone: 'positive',
+    headline: "You're on Premium",
+    detail: `Your plan renews on ${when}.`,
+    actions: { canChangePlan: true, canCancel: true, canResume: false, managedElsewhere: false },
+  };
+}
+
+// ── Checkout-success routing ────────────────────────────────────────────────────
+//
+// /shop/confirm already polls order status and handles every terminal state. A second
+// page doing the same thing is a second place for that logic to drift, so
+// /checkout/success does NOT re-implement it. This function decides which case the
+// landing actually is.
+//
+// The two are genuinely different: a product order resolves into an `orders` row and
+// is polled by order id; a subscription checkout resolves into an ENTITLEMENT, with no
+// order at all. Stripe's hosted Checkout for subscriptions needs a success_url, and
+// this is it.
+
+export type SuccessLanding =
+  | { kind: 'order'; orderId: string; redirectTo: '/shop/confirm' }
+  | { kind: 'subscription' }
+  | { kind: 'unknown' };
+
+export interface SessionStorageLike {
+  getItem(key: string): string | null;
+  removeItem(key: string): void;
+}
+
+export const PENDING_ORDER_KEY = 'pending_order_id';
+export const PENDING_SUBSCRIPTION_KEY = 'pending_subscription_checkout';
+
+export function classifyLanding(storage: SessionStorageLike): SuccessLanding {
+  // Order wins when both are somehow set: an unresolved product order is the one with
+  // money already captured against a specific row to reconcile.
+  const orderId = storage.getItem(PENDING_ORDER_KEY);
+  if (orderId) return { kind: 'order', orderId, redirectTo: '/shop/confirm' };
+  if (storage.getItem(PENDING_SUBSCRIPTION_KEY)) return { kind: 'subscription' };
+  return { kind: 'unknown' };
+}
+
+// ── Entitlement polling ─────────────────────────────────────────────────────────
+
+export type PollState = 'polling' | 'premium' | 'timeout' | 'unknown_landing';
+
+export const ENTITLEMENT_POLL_INTERVAL_MS = 2000;
+/** Matches /shop/confirm's 10-minute budget. A webhook that has not landed in ten
+ *  minutes is an incident, not a slow request, and the user should be told plainly
+ *  rather than watched a spinner indefinitely. */
+export const ENTITLEMENT_POLL_TIMEOUT_MS = 600000;
+
+export function nextPollState(input: {
+  premium: boolean;
+  elapsedMs: number;
+}): PollState {
+  if (input.premium) return 'premium';
+  if (input.elapsedMs > ENTITLEMENT_POLL_TIMEOUT_MS) return 'timeout';
+  return 'polling';
+}
+
+export interface PollCopy {
+  headline: string;
+  detail: string;
+  /** Never true while the server has not confirmed. The whole point. */
+  claimsSuccess: boolean;
+}
+
+export function pollCopy(state: PollState): PollCopy {
+  switch (state) {
+    case 'premium':
+      return {
+        headline: 'Premium is active',
+        detail: 'Everything is unlocked. You can manage or cancel your plan any time from your subscription page.',
+        claimsSuccess: true,
+      };
+    case 'timeout':
+      // Deliberately does NOT say the payment failed — we do not know that. It says
+      // what we actually know: confirmation has not arrived yet.
+      return {
+        headline: "We haven't had confirmation yet",
+        detail:
+          "Your payment may still be going through. Nothing is lost — if it completed, Premium will switch on by itself. Check your subscription page in a few minutes, and contact us if it still looks wrong.",
+        claimsSuccess: false,
+      };
+    case 'unknown_landing':
+      return {
+        headline: 'Nothing to confirm here',
+        detail: "We don't have a payment in progress for this session. If you just paid, check your subscription page.",
+        claimsSuccess: false,
+      };
+    default:
+      return {
+        headline: 'Confirming your payment',
+        detail: 'This takes a few seconds. Please keep this page open.',
+        claimsSuccess: false,
+      };
+  }
+}

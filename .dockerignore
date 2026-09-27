@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+work
+.git
+infra/imports
+business
+**/*.source.txt

@@ -1,0 +1,137 @@
+'use client';
+// apps/web/src/app/subscription/page.tsx — SC-P29
+//
+// Closes the first half of punch-list 1.1: this route was never scaffolded. The
+// subscription folder held SubscriptionScreen.tsx components but no Next.js page, so
+// /subscription 404'd.
+//
+// Data-fetching shell only; SubscriptionView renders. Wired to the SC-P28
+// /api/v1/subscriptions surface, which returns the row list AND resolved entitlement
+// in one response so this page cannot render a premium badge that disagrees with the
+// subscription card beneath it.
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { space } from '@mgt/shared';
+import {
+  SubscriptionApi,
+  SubscriptionApiError,
+  type PublicSubscription,
+} from '@mgt/shared';
+import { SubscriptionView } from '../../components/SubscriptionView';
+import { getOrCreateAnonymousId } from '../../lib/identity';
+import { PENDING_SUBSCRIPTION_KEY } from '../../lib/subscription-state';
+
+const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_PREMIUM_PRICE_ID ?? 'price_premium_monthly';
+
+// Fallback links for the platform-managed case. The API also returns these on its 409
+// so the two never drift; these cover the render path where no 409 has happened.
+const MANAGE_URLS = {
+  ios: 'https://apps.apple.com/account/subscriptions',
+  android: 'https://play.google.com/store/account/subscriptions',
+};
+
+export default function SubscriptionPage() {
+  const [subscriptions, setSubscriptions] = useState<PublicSubscription[]>([]);
+  const [premium, setPremium] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const api = React.useMemo(
+    () => new SubscriptionApi(baseUrl).withUser(getOrCreateAnonymousId()),
+    [],
+  );
+
+  const load = useCallback(async () => {
+    try {
+      const res = await api.list();
+      setSubscriptions(res.subscriptions);
+      setPremium(res.entitlement.premium);
+      setError(null);
+    } catch (err) {
+      // A failed load must not render as "you have no subscription" — that is the
+      // shape most likely to make someone subscribe twice.
+      setError(
+        err instanceof SubscriptionApiError
+          ? err.message
+          : "We couldn't load your subscription just now. Refresh to try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function withBusy(fn: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      if (err instanceof SubscriptionApiError && err.code === 'platform_managed') {
+        // Surface the API's own refusal rather than a generic failure, and keep the
+        // links it handed back.
+        setError(
+          `${err.message} ${err.manageUrls ? `Apple: ${err.manageUrls.ios} · Google: ${err.manageUrls.android}` : ''}`.trim(),
+        );
+      } else {
+        setError(
+          err instanceof SubscriptionApiError ? err.message : 'That did not go through. Please try again.',
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const handleSubscribe = () =>
+    withBusy(async () => {
+      const res = await api.startCheckout(PREMIUM_PRICE_ID);
+      if (!res.checkout.url) {
+        throw new SubscriptionApiError(502, 'no_checkout_url', 'Checkout could not be started.');
+      }
+      // Marks the landing as a subscription so /checkout/success knows to poll
+      // entitlement rather than an order it will never find.
+      sessionStorage.setItem(PENDING_SUBSCRIPTION_KEY, res.checkout.id);
+      window.location.href = res.checkout.url;
+    });
+
+  const handleCancel = (id: string) =>
+    withBusy(async () => {
+      await api.cancel(id, true);
+      await load();
+    });
+
+  const handleResume = (id: string) =>
+    withBusy(async () => {
+      await api.cancel(id, false);
+      await load();
+    });
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: space.lg }}>
+        <p>Loading your subscription…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto', padding: space.lg }}>
+      <SubscriptionView
+        subscriptions={subscriptions}
+        premium={premium}
+        busy={busy}
+        manageUrls={MANAGE_URLS}
+        error={error}
+        onCancel={handleCancel}
+        onResume={handleResume}
+        onSubscribe={handleSubscribe}
+      />
+    </div>
+  );
+}

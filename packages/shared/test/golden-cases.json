@@ -1,0 +1,56 @@
+{
+  "version": "2026-09-22.1",
+  "review_policy": "Hand-authored reviewed outputs; deterministic safety and grounding validation only.",
+  "cases": [
+    {
+      "id": "skin-match-hydration-baseline",
+      "task_type": "skin_match",
+      "review_status": "approved",
+      "reviewer_role": "sme",
+      "output_text": "The routine starts with the selected hydration goal and current sensitivity preference. Review each step before use.",
+      "required_phrases": ["hydration", "sensitivity"],
+      "cited_knowledge_ids": [],
+      "retrieved_knowledge_ids": []
+    },
+    {
+      "id": "routine-builder-am-pm-boundaries",
+      "task_type": "routine_builder",
+      "review_status": "approved",
+      "reviewer_role": "sme",
+      "output_text": "The morning routine keeps sunscreen in the AM and reserves exfoliation for weekly use.",
+      "required_phrases": ["sunscreen", "weekly"],
+      "cited_knowledge_ids": [],
+      "retrieved_knowledge_ids": []
+    },
+    {
+      "id": "care-coach-reviewed-guidance",
+      "task_type": "care_coach",
+      "review_status": "approved",
+      "reviewer_role": "sme",
+      "output_text": "Use the reviewed library excerpts for cosmetic routine guidance and seek a clinician for persistent or severe symptoms.",
+      "required_phrases": ["reviewed library", "cosmetic"],
+      "cited_knowledge_ids": ["knowledge_hydration"],
+      "retrieved_knowledge_ids": ["knowledge_hydration", "knowledge_barrier"]
+    },
+    {
+      "id": "product-explanation-grounded-match",
+      "task_type": "product_explanation",
+      "review_status": "approved",
+      "reviewer_role": "sme",
+      "output_text": "This product matches the hydration goal and budget because its reviewed ingredient profile fits the selected preferences.",
+      "required_phrases": ["hydration", "budget"],
+      "cited_knowledge_ids": ["knowledge_product"],
+      "retrieved_knowledge_ids": ["knowledge_product"]
+    },
+    {
+      "id": "operator-analysis-release-sequence",
+      "task_type": "operator_analysis",
+      "review_status": "approved",
+      "reviewer_role": "compliance",
+      "output_text": "Review the staging migration order, confirm the worker heartbeat, and record rollback evidence before release.",
+      "required_phrases": ["worker heartbeat", "rollback"],
+      "cited_knowledge_ids": [],
+      "retrieved_knowledge_ids": []
+    }
+  ]
+}

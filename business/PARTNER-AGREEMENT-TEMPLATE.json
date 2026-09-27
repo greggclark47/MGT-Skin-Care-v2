@@ -1,0 +1,36 @@
+{
+  "status": "draft_not_executable",
+  "vendor_legal_name": null,
+  "vendor_storefront": null,
+  "merchant_of_record": "external_vendor",
+  "vendor_responsibilities": [
+    "customer_billing",
+    "payment_processing",
+    "shipping",
+    "returns",
+    "refunds",
+    "purchase_support"
+  ],
+  "mgt_services": [
+    "discovery",
+    "agreed_referral_services"
+  ],
+  "agreement_id": null,
+  "signatures_verified": false,
+  "effective_date": null,
+  "territories": [],
+  "billing_currency": null,
+  "fee_model": null,
+  "fixed_fee": null,
+  "percentage_tiers": [],
+  "attribution_window_days": null,
+  "commission_basis": null,
+  "excluded_amounts": [],
+  "return_validation_window_days": null,
+  "settlement_frequency": null,
+  "minimum_payout_or_invoice": null,
+  "reporting_method": null,
+  "disclosure_text": null,
+  "tracking_consent_review_complete": false,
+  "activation_allowed": false
+}

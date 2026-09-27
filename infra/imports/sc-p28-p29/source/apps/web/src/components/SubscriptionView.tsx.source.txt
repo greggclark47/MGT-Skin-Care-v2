@@ -1,0 +1,127 @@
+// apps/web/src/components/SubscriptionView.tsx — SC-P29
+//
+// Presentational only, same split as OrderConfirmation (SC-P15): the page fetches,
+// this renders. All wording and action availability come from describeSubscription()
+// in lib/subscription-state.ts, so there is exactly one place where "may this row be
+// cancelled here" is decided and the smoke suite can assert it without a renderer.
+
+import React from 'react';
+import { space } from '@mgt/shared';
+import {
+  describeSubscription,
+  type SubscriptionLike,
+} from '../lib/subscription-state';
+
+export interface SubscriptionViewProps {
+  subscriptions: SubscriptionLike[];
+  premium: boolean;
+  busy: boolean;
+  manageUrls: { ios: string; android: string };
+  onCancel: (subscriptionId: string) => void;
+  onResume: (subscriptionId: string) => void;
+  onSubscribe: () => void;
+  /** Non-null when the last action failed. Rendered as-is — the API's own message. */
+  error: string | null;
+}
+
+const TONE_COLOR = {
+  // Amber, never red. A billing state is a "needs attention", not an alarm — the same
+  // ruling the lift-refusal screen made, for the same reason.
+  positive: '#7C3AED',
+  attention: '#B45309',
+  ended: '#6B7280',
+} as const;
+
+export function SubscriptionView(props: SubscriptionViewProps) {
+  const { subscriptions, premium, busy, manageUrls, error } = props;
+
+  if (subscriptions.length === 0) {
+    return (
+      <section style={{ padding: space.lg }}>
+        <h1 style={{ marginTop: 0 }}>Premium</h1>
+        <p>
+          You're on the free plan. Premium adds the AI Coach, unlimited routine
+          re-personalisation, and live voice guidance.
+        </p>
+        <p style={{ color: '#6B7280' }}>$14.99 per month. Cancel any time.</p>
+        {error ? <p role="alert" style={{ color: TONE_COLOR.attention }}>{error}</p> : null}
+        <button onClick={props.onSubscribe} disabled={busy} style={buttonStyle}>
+          {busy ? 'Starting…' : 'Go Premium'}
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section style={{ padding: space.lg }}>
+      <h1 style={{ marginTop: 0 }}>Your subscription</h1>
+      {error ? (
+        <p role="alert" style={{ color: TONE_COLOR.attention, marginBottom: space.md }}>
+          {error}
+        </p>
+      ) : null}
+
+      {subscriptions.map((sub) => {
+        const view = describeSubscription(sub);
+        return (
+          <article
+            key={sub.id}
+            style={{
+              borderLeft: `3px solid ${TONE_COLOR[view.tone]}`,
+              paddingLeft: space.md,
+              marginBottom: space.lg,
+            }}
+          >
+            <h2 style={{ fontSize: 18, margin: `0 0 ${space.xs}px` }}>{view.headline}</h2>
+            <p style={{ margin: `0 0 ${space.md}px`, color: '#374151' }}>{view.detail}</p>
+
+            {view.actions.managedElsewhere ? (
+              // No in-app cancel button next to this text. Rendering one that opens a
+              // dialog saying "you can't do that here" would be worse than not having it.
+              <p style={{ margin: 0 }}>
+                <a href={manageUrls.ios} style={linkStyle}>Manage on Apple</a>
+                {' · '}
+                <a href={manageUrls.android} style={linkStyle}>Manage on Google Play</a>
+              </p>
+            ) : null}
+
+            {view.actions.canResume ? (
+              <button onClick={() => props.onResume(sub.id)} disabled={busy} style={buttonStyle}>
+                {busy ? 'Working…' : 'Keep my subscription'}
+              </button>
+            ) : null}
+
+            {view.actions.canCancel ? (
+              <button
+                onClick={() => props.onCancel(sub.id)}
+                disabled={busy}
+                style={{ ...buttonStyle, background: 'transparent', color: '#6B7280', border: '1px solid #D1D5DB' }}
+              >
+                {busy ? 'Working…' : 'Cancel subscription'}
+              </button>
+            ) : null}
+          </article>
+        );
+      })}
+
+      {!premium ? (
+        <button onClick={props.onSubscribe} disabled={busy} style={buttonStyle}>
+          {busy ? 'Starting…' : 'Go Premium'}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+const buttonStyle: React.CSSProperties = {
+  background: '#7C3AED',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  padding: '12px 20px',
+  fontSize: 16,
+  cursor: 'pointer',
+  marginRight: 8,
+};
+
+const linkStyle: React.CSSProperties = { color: '#7C3AED' };

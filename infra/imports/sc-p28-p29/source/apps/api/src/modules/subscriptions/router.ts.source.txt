@@ -1,0 +1,304 @@
+// modules/subscriptions/router.ts — SC-P28
+//
+// The API surface that /subscription/page.tsx needs (punch-list 1.1). Handlers are
+// thin over ports: SubscriptionRepository for reads/state, SubscriptionBillingPort
+// for anything that costs money. Neither port knows a table shape or a vendor SDK,
+// so this file does not change when punch-list 0.3 / 0.5 resolve.
+//
+// Two rulings are enforced here, both carried from locked decisions rather than
+// invented for this pass:
+//
+// 1. ONE entitlement system across web/Apple/Google, but only ONE of those rails is
+//    ours to mutate. A RevenueCat-sourced subscription is owned by Apple or Google:
+//    we cannot upgrade, change or cancel it server-side, and pretending otherwise
+//    produces a button that reports success while the user keeps getting billed by
+//    Apple. Every mutating route refuses a revenuecat-sourced row with 409
+//    `platform_managed` and hands back the platform's own management URL.
+//
+// 2. Subscription state is webhook-authoritative, exactly as order state is. POST
+//    and PUT return the intent/checkout handle for the client to complete; they do
+//    NOT write `active` into `subscriptions`. The Stripe and RevenueCat webhook
+//    routers remain the only writers of status. A cancel is the one exception, and
+//    even it only sets `cancel_at_period_end` — never a status, never a delete.
+
+import { Router, type Request, type Response, type RequestHandler } from 'express';
+import { z } from 'zod';
+import { ApiError } from '../../middleware/error';
+import type {
+  SubscriptionDetail,
+  SubscriptionRepository,
+} from '../../persistence/subscription-repository';
+
+// ── Billing port ────────────────────────────────────────────────────────────────
+// Mirrors the PaymentProvider pattern in modules/checkout/router.ts: the concrete
+// implementation is chosen in server.ts at wiring time, never inside this module,
+// so the routes under test never learn which rail is in play.
+
+export interface SubscriptionCheckout {
+  /** Stripe Checkout Session id or SetupIntent id — opaque to this module. */
+  id: string;
+  /** Where the client continues. Never a success page: the webhook decides success. */
+  url: string | null;
+  client_secret: string | null;
+}
+
+export interface SubscriptionBillingPort {
+  createCheckout(input: {
+    userId: string;
+    priceId: string;
+    existingSubscriptionId?: string;
+  }): Promise<SubscriptionCheckout>;
+  changePrice(input: { providerSubscriptionId: string; priceId: string }): Promise<void>;
+  cancelAtPeriodEnd(input: { providerSubscriptionId: string }): Promise<void>;
+}
+
+/** Local/dev double. Returns deterministic handles; performs no billing. */
+export class StubSubscriptionBillingPort implements SubscriptionBillingPort {
+  async createCheckout(input: { userId: string; priceId: string }): Promise<SubscriptionCheckout> {
+    const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return {
+      id: `cs_stub_${stamp}`,
+      url: `https://stub.invalid/checkout/${stamp}?price=${encodeURIComponent(input.priceId)}`,
+      client_secret: `cs_stub_secret_${stamp}`,
+    };
+  }
+  async changePrice(): Promise<void> {}
+  async cancelAtPeriodEnd(): Promise<void> {}
+}
+
+// ── Platform management URLs ────────────────────────────────────────────────────
+// Apple and Google both require the user to manage the subscription themselves.
+// These are the canonical deep links; neither needs a credential.
+const PLATFORM_MANAGE_URLS = {
+  ios: 'https://apps.apple.com/account/subscriptions',
+  android: 'https://play.google.com/store/account/subscriptions',
+} as const;
+
+// ── Identity ────────────────────────────────────────────────────────────────────
+// [OPEN — no consumer auth middleware exists yet; only admin routes are protected.]
+// This resolver is injected so real auth drops in without touching handlers. The
+// default FAILS CLOSED: without an explicit opt-in env flag, every request is 401.
+// A dev convenience that defaults to trusting a header is how a staging shortcut
+// reaches production.
+export type UserResolver = (req: Request) => string | null;
+
+export const headerUserResolver: UserResolver = (req) => {
+  if (process.env.ALLOW_HEADER_USER_ID !== 'true') return null;
+  const raw = req.header('x-user-id');
+  return raw && raw.trim().length > 0 ? raw.trim() : null;
+};
+
+// ── Validation ──────────────────────────────────────────────────────────────────
+
+const createBody = z.object({
+  price_id: z.string().min(1, 'price_id is required'),
+  /** Present when upgrading/downgrading an existing subscription. */
+  subscription_id: z.string().min(1).optional(),
+});
+
+const updateBody = z.object({
+  price_id: z.string().min(1, 'price_id is required'),
+});
+
+const cancelBody = z
+  .object({
+    /** false un-cancels a subscription still inside its paid period. */
+    cancel_at_period_end: z.boolean().default(true),
+  })
+  .default({ cancel_at_period_end: true });
+
+function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .map((i) => `${i.path.join('.') || '(body)'}: ${i.message}`)
+      .join('; ');
+    throw new ApiError(400, 'invalid_request', detail);
+  }
+  return parsed.data;
+}
+
+// ── Serialization ───────────────────────────────────────────────────────────────
+// provider_subscription_id is deliberately NOT exposed: it is a vendor-side handle
+// that no client needs and that makes support-channel impersonation easier.
+function toPublic(sub: SubscriptionDetail) {
+  return {
+    id: sub.id,
+    provider: sub.provider,
+    status: sub.status,
+    current_period_end: sub.current_period_end,
+    price_id: sub.price_id,
+    cancel_at_period_end: sub.cancel_at_period_end,
+    platform_managed: sub.provider === 'revenuecat',
+    created_at: sub.created_at,
+  };
+}
+
+// Written directly rather than thrown as an ApiError, because the useful part of
+// this refusal is the two URLs the user has to go to, and ApiError (SC-P25) carries
+// only status/code/message. Extending ApiError for one case would ripple through the
+// checkout/referral/replenishment/entitlement routers that share it.
+function refusePlatformManaged(res: Response): void {
+  res.status(409).json({
+    error: {
+      code: 'platform_managed',
+      message:
+        'This subscription is billed by Apple or Google. It can only be changed in their subscription settings — we cannot change or cancel it for you.',
+      manage_urls: PLATFORM_MANAGE_URLS,
+    },
+  });
+}
+
+export function subscriptionsRouter(
+  subscriptions: SubscriptionRepository,
+  billing: SubscriptionBillingPort,
+  resolveUser: UserResolver = headerUserResolver,
+) {
+  const router = Router();
+
+  const requireUser: RequestHandler = (req, _res, next) => {
+    const userId = resolveUser(req);
+    if (!userId) {
+      next(new ApiError(401, 'unauthenticated', 'Sign in to manage your subscription.'));
+      return;
+    }
+    (req as Request & { userId: string }).userId = userId;
+    next();
+  };
+
+  const userIdOf = (req: Request): string => (req as Request & { userId: string }).userId;
+
+  const loadOwned = async (req: Request): Promise<SubscriptionDetail> => {
+    // Express types `params` as string | string[]; a repeated param would otherwise
+    // reach the repository as an array and widen the query predicate.
+    const raw = req.params.id;
+    const id = Array.isArray(raw) ? raw[0] : raw;
+    if (!id) throw new ApiError(400, 'invalid_request', 'Missing subscription id.');
+    const sub = await subscriptions.getById(userIdOf(req), id);
+    // 404 rather than 403 for a row owned by someone else: the ownership predicate
+    // is in the query, so "not yours" and "does not exist" are the same answer here,
+    // and that is the answer that leaks nothing about which ids exist.
+    if (!sub) throw new ApiError(404, 'subscription_not_found', `No subscription ${id}.`);
+    return sub;
+  };
+
+  router.use(requireUser);
+
+  // ── GET / ── the user's subscriptions plus resolved entitlement ───────────────
+  // Entitlement ships alongside the list so the page renders premium state from one
+  // round trip and cannot disagree with itself mid-render.
+  router.get('/', async (req, res, next) => {
+    try {
+      const userId = userIdOf(req);
+      const [rows, entitlement] = await Promise.all([
+        subscriptions.listForUser(userId),
+        subscriptions.resolveFor(userId),
+      ]);
+      res.json({ subscriptions: rows.map(toPublic), entitlement });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── GET /:id ──────────────────────────────────────────────────────────────────
+  router.get('/:id', async (req, res, next) => {
+    try {
+      res.json({ subscription: toPublic(await loadOwned(req)) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── POST / ── start a new subscription, or an upgrade of an existing one ──────
+  router.post('/', async (req, res, next) => {
+    try {
+      const body = parseBody(createBody, req.body);
+      const userId = userIdOf(req);
+
+      if (body.subscription_id) {
+        const existing = await subscriptions.getById(userId, body.subscription_id);
+        if (!existing) {
+          throw new ApiError(404, 'subscription_not_found', `No subscription ${body.subscription_id}.`);
+        }
+        if (existing.provider === 'revenuecat') { refusePlatformManaged(res); return; }
+      }
+
+      const checkout = await billing.createCheckout({
+        userId,
+        priceId: body.price_id,
+        existingSubscriptionId: body.subscription_id,
+      });
+
+      // 202, not 201: nothing is subscribed yet. The resource appears when the
+      // webhook says the payment cleared.
+      res.status(202).json({
+        checkout: { id: checkout.id, url: checkout.url, client_secret: checkout.client_secret },
+        status: 'pending_payment',
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── PUT /:id ── change plan ───────────────────────────────────────────────────
+  router.put('/:id', async (req, res, next) => {
+    try {
+      const body = parseBody(updateBody, req.body);
+      const sub = await loadOwned(req);
+      if (sub.provider === 'revenuecat') { refusePlatformManaged(res); return; }
+      if (!sub.provider_subscription_id) {
+        throw new ApiError(
+          409,
+          'not_provisioned',
+          'This subscription has no billing record yet. Wait for the payment to finish, then try again.',
+        );
+      }
+      await billing.changePrice({
+        providerSubscriptionId: sub.provider_subscription_id,
+        priceId: body.price_id,
+      });
+      // Deliberately does not write price_id locally — the webhook does, once the
+      // proration actually lands. Returning the pre-change row is honest.
+      res.status(202).json({ subscription: toPublic(sub), status: 'pending_provider_update' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── DELETE /:id ── cancel at period end ───────────────────────────────────────
+  router.delete('/:id', async (req, res, next) => {
+    try {
+      const body = parseBody(cancelBody, req.body ?? {});
+      const sub = await loadOwned(req);
+      if (sub.provider === 'revenuecat') { refusePlatformManaged(res); return; }
+      if (!sub.provider_subscription_id) {
+        throw new ApiError(
+          409,
+          'not_provisioned',
+          'This subscription has no billing record yet, so there is nothing to cancel.',
+        );
+      }
+
+      // Provider first, local flag second. If the provider call fails we have not
+      // told the user they are cancelled while Stripe keeps charging them; the
+      // reverse ordering produces exactly that.
+      if (body.cancel_at_period_end) {
+        await billing.cancelAtPeriodEnd({ providerSubscriptionId: sub.provider_subscription_id });
+      }
+      await subscriptions.setCancelAtPeriodEnd(sub.user_id, sub.id, body.cancel_at_period_end);
+
+      res.json({
+        subscription: { ...toPublic(sub), cancel_at_period_end: body.cancel_at_period_end },
+        // Access is NOT revoked now. Saying so plainly is the difference between a
+        // cancel flow people trust and one they call support about.
+        access_until: sub.current_period_end,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  return router;
+}
+
+export { PLATFORM_MANAGE_URLS };

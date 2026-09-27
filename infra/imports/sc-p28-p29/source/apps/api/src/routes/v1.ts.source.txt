@@ -1,0 +1,67 @@
+// routes/v1.ts — SC-P28
+//
+// Punch-list 1.2: the versioned path prefix and the error envelope, in one place.
+//
+// WHY A SEPARATE ENVELOPE. The live apiErrorHandler (SC-P25) renders an ApiError as
+// `{ error: "<code>", message: "<text>" }` — `error` is a string. That shape is
+// already consumed by the legacy `/api/*` mounts, so changing it in place would
+// break callers we cannot test against today. v1 uses `{ error: { code, message } }`
+// instead, which is the shape the new /subscription page is written against and the
+// one that has room to carry extra fields (manage_urls, retry_after) without another
+// breaking change. Both handlers coexist: v1's is scoped to this router, the legacy
+// one stays mounted on the old paths. When the web client has fully moved to
+// /api/v1/, the legacy mounts and their handler come out together.
+//
+// WHAT IS DELIBERATELY NOT HERE: `POST /api/v1/checkout/confirm`. The SC-P27 gap
+// analysis lists it as required, and it should not be built. Order status is
+// server-authoritative and set only by the verified Stripe webhook; a client-callable
+// confirm endpoint is precisely the thing shop/confirm/page.tsx's own header comment
+// says the design exists to prevent. `GET /orders/:orderId/status` — which already
+// exists in modules/checkout/router.ts — is the whole client-side contract.
+
+import { Router, type ErrorRequestHandler } from 'express';
+import { ApiError } from '../middleware/error';
+
+export const API_V1_PREFIX = '/api/v1';
+
+/** v1 error envelope. Scoped to the v1 router — see the header. */
+export const v1ErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  if (err instanceof ApiError) {
+    res.status(err.status).json({ error: { code: err.code, message: err.message } });
+    return;
+  }
+  // Unexpected errors are logged with their real message and answered with a generic
+  // one: a driver error string can carry a column list or a connection string.
+  console.error('[api/v1] Unhandled error:', err instanceof Error ? err.message : String(err));
+  res.status(500).json({
+    error: { code: 'internal_error', message: 'Something went wrong on our end.' },
+  });
+};
+
+export interface V1Routers {
+  checkout: Router;
+  subscriptions: Router;
+  entitlement?: Router;
+}
+
+export function createV1Router(routers: V1Routers): Router {
+  const v1 = Router();
+
+  v1.use('/checkout', routers.checkout);
+  v1.use('/subscriptions', routers.subscriptions);
+  if (routers.entitlement) v1.use('/entitlement', routers.entitlement);
+
+  // Scoped 404 so an unknown /api/v1/* path answers in the v1 envelope rather than
+  // falling through to the app-level `{ error: 'Not found' }`.
+  v1.use((_req, res) => {
+    res.status(404).json({ error: { code: 'not_found', message: 'No such endpoint.' } });
+  });
+
+  v1.use(v1ErrorHandler);
+
+  return v1;
+}
